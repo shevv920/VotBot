@@ -3,10 +3,12 @@ package votbot
 import pureconfig.generic.auto._
 import votbot.config.Config
 import votbot.event.Event._
+import votbot.event.handlers.SimpleQuotes
 import votbot.event.{ BaseEventHandler, Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.Irc.{ Channel, RawMessage }
 import zio._
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.{ Console, _ }
 import zio.nio.SocketAddress
@@ -17,7 +19,15 @@ object Main extends App {
   val maxMessageLength = 512
   trait BasicEnv extends Console.Live with Clock.Live with Random.Live
 
-  trait VotbotEnv extends Console with Clock with Random with Configuration with BotState with Api with BaseEventHandler
+  trait VotbotEnv
+      extends Console
+      with Clock
+      with Random
+      with Configuration
+      with BotState
+      with Api
+      with BaseEventHandler
+      with Blocking
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic
@@ -30,8 +40,8 @@ object Main extends App {
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[String, Channel])
-          handlers <- Ref.make(List[EventHandler]())
-        } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler {
+          handlers <- Ref.make(List[EventHandler](SimpleQuotes))
+        } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
           override val state: Ref[State]                       = st

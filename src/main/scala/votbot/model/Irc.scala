@@ -147,11 +147,14 @@ object Irc {
 
   sealed trait Message
   final case class RawMessage(cmd: Command, args: Vector[String], prefix: Option[Prefix] = None) extends Message
-  final case class Prefix(nick: String, username: String, host: String)
 
   object RawMessage {
-    def apply(cmd: Command, args: String*): RawMessage = new RawMessage(cmd, args.toVector, None)
+
+    def apply(cmd: Command, args: String*): RawMessage =
+      new RawMessage(cmd, args.toVector.updated(args.size - 1, ":" + args.last), None)
   }
+
+  final case class Prefix(nick: String, username: String, host: String)
 
   sealed trait Command extends EnumEntry with Uppercase
 
