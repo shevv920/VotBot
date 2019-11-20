@@ -171,7 +171,7 @@ object Irc {
     final case object Pong    extends Command
     final case object Privmsg extends Command
     final case object Kick    extends Command
-    final case object Quit extends Command
+    final case object Quit    extends Command
 
     final case class Unknown(raw: String) extends Command
     final case class Numeric(cmd: String) extends Command

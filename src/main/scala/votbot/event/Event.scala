@@ -25,7 +25,7 @@ object Event {
   final case class Pong(args: String)                                                       extends Event
   final case class Welcome(nick: String, host: String)                                      extends Event
   final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
-  final case class Quit(user: String, reason: String) extends Event
+  final case class Quit(user: String, reason: String)                                       extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
