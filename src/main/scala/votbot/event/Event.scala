@@ -25,6 +25,7 @@ object Event {
   final case class Pong(args: String)                                                       extends Event
   final case class Welcome(nick: String, host: String)                                      extends Event
   final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
+  final case class Quit(user: String, reason: String) extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
@@ -66,6 +67,8 @@ object Event {
             ChannelNotice(prefix.nick, args.head, args.last)
           else
             Notice(prefix.nick, args.last)
+        case RawMessage(Command.Quit, args, Some(prefix)) =>
+          Quit(prefix.nick, args.mkString)
         case _ => Unknown(ircMsg)
       }
     } yield event

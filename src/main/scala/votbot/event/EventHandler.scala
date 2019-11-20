@@ -1,7 +1,7 @@
 package votbot.event
 
 import votbot.Main.VotbotEnv
-import votbot.event.Event.{ BotJoin, BotPart, Connected, Event, Join, Numeric, Part, Ping, Welcome }
+import votbot.event.Event.{ BotJoin, BotPart, Connected, Event, Join, Numeric, Part, Ping, Quit, Welcome }
 import votbot.model.Irc.Numeric.{ ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_NAMREPLY, RPL_YOURHOST }
 import votbot.model.Irc._
 import votbot.{ Api, BotState, Configuration }
@@ -72,6 +72,8 @@ trait BaseEventHandler extends EventHandler {
               api.addChannelMember(args(2), names: _*)
             case Numeric(RPL_ENDOFNAMES, args, prefix) =>
               ZIO.unit
+            case Quit(user, reason) =>
+              ???
           }
       handlers <- customHandlers.get
       _        <- ZIO.foreach(handlers)(handler => handler.handle(event))
