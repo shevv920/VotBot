@@ -9,7 +9,7 @@ import zio.console.putStrLn
 
 object Event {
   sealed trait Event
-  trait IncomingMessage extends Event { val msg: String }
+  trait IncomingMessage extends Event {val sender: String; val msg: String }
 
   final case class ChannelMessage(sender: String, channel: String, msg: String)             extends IncomingMessage
   final case class PrivateMessage(sender: String, msg: String)                              extends IncomingMessage

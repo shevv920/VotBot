@@ -1,9 +1,11 @@
 package votbot
 
+import java.nio.charset.StandardCharsets
+
 import votbot.model.Irc.Command.Unknown
-import votbot.model.Irc.{ Command, Prefix, RawMessage }
+import votbot.model.Irc.{Command, Prefix, RawMessage}
 import zio.console._
-import zio.{ Task, UIO, ZIO }
+import zio.{Task, UIO, ZIO}
 
 import scala.annotation.tailrec
 
@@ -67,6 +69,6 @@ object MsgParser {
           separator +
           msg.args.mkString(separator) +
           messageDelimiter
-      str.getBytes
+      str.getBytes(StandardCharsets.UTF_8)
     }
 }

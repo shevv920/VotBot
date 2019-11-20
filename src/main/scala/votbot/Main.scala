@@ -1,18 +1,21 @@
 package votbot
 
+import java.nio.file.Paths
+
 import pureconfig.generic.auto._
 import votbot.config.Config
 import votbot.event.Event._
-import votbot.event.handlers.SimpleQuotes
-import votbot.event.{ BaseEventHandler, Event, EventHandler }
+import votbot.event.handlers.Quotes
+import votbot.event.{BaseEventHandler, Event, EventHandler}
 import votbot.model.Bot.State
-import votbot.model.Irc.{ Channel, RawMessage }
+import votbot.model.Irc.{Channel, RawMessage}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.console.{ Console, _ }
+import zio.console.{Console, _}
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
+import zio.nio.file.Path
 import zio.random.Random
 
 object Main extends App {
@@ -33,14 +36,14 @@ object Main extends App {
     mainLogic
       .provideSomeM(
         for {
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[config.Config])
+          cfg      <- ZIO.fromEither(pureconfig.loadConfig[config.Config](Paths.get("../application.conf")))
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[String, Channel])
-          handlers <- Ref.make(List[EventHandler](SimpleQuotes))
+          handlers <- Ref.make(List[EventHandler](Quotes))
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg

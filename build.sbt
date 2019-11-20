@@ -4,6 +4,9 @@ name := "VotBot"
 version := "0.1"
 scalaVersion := "2.12.10"
 
+packResourceDir += (baseDirectory.value / "src" / "main" / "resources" -> "")
+mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".conf")) }
+mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".txt")) }
 libraryDependencies ++= Seq(
   "dev.zio"               %% "zio"        % "1.0.0-RC16",
   "dev.zio"               %% "zio-nio"    % "0.3.1",
