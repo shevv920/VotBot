@@ -1,16 +1,16 @@
 package votbot.event.handlers
-import votbot.{ Api, BotState }
+import votbot.BotState
 import votbot.Main.VotbotEnv
-import votbot.event.Event.{ ChannelMessage, Event, IncomingMessage, PrivateMessage }
+import votbot.event.Event.{ ChannelMessage, Event }
 import votbot.event.EventHandler
 import zio.ZIO
-import zio.nio.file.{ Files, Path }
-import zio.random.Random
 
 import scala.util.matching.Regex
 
 trait CommandHandler extends EventHandler {
   val commands: List[String]
+  val description: String
+  val helpMessage: String = "Commands " + commands.mkString("[", ", ", "]") + " - " + description
 
   def response(channel: String): ZIO[VotbotEnv, Throwable, Unit]
 
@@ -28,18 +28,5 @@ trait CommandHandler extends EventHandler {
             case cm: ChannelMessage if regex.findFirstIn(cm.msg).nonEmpty =>
               response(cm.channel)
           }
-    } yield ()
-}
-
-object Quotes extends CommandHandler {
-  override val commands: List[String] = List("q", "й", "quote", "йгщеу")
-  override def response(channel: String): ZIO[VotbotEnv, Throwable, Unit] =
-    for {
-      api    <- ZIO.environment[Api]
-      random <- ZIO.access[Random](_.random)
-      lines  <- Files.readAllLines(Path("../quotes.txt")).map(_.toVector)
-      rnd    <- random.nextInt(lines.size)
-      quote  <- ZIO.effect(lines(rnd))
-      _      <- api.sendChannelMessage(channel, quote)
     } yield ()
 }
