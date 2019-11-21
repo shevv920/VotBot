@@ -73,8 +73,10 @@ object Event {
           BotPart(channel.mkString(", "))
         case RawMessage(Command.Join, args, Some(prefix)) =>
           Join(prefix.nick, args.mkString(", "))
+        case RawMessage(Command.Part, args, Some(prefix)) if args.size > 1 =>
+          Part(prefix.nick, args.mkString(", "), prefix.nick) //last - reason
         case RawMessage(Command.Part, args, Some(prefix)) =>
-          Part(prefix.nick, args.dropRight(1).mkString(", "), args.last) //last - reason
+          Part(prefix.nick, args.dropRight(1).mkString(", "), args.last)
         case RawMessage(Command.Notice, args, Some(prefix)) =>
           if (args.head.startsWith("#"))
             ChannelNotice(prefix.nick, args.head, args.last)

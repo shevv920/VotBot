@@ -1,5 +1,6 @@
 package votbot
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import pureconfig.generic.auto._
@@ -91,7 +92,7 @@ object Main extends App {
   ): ZIO[VotbotEnv, Throwable, Unit] =
     for {
       chunk        <- channel.read(maxMessageLength)
-      str          <- ZIO.effect(rem + new String(chunk.toArray))
+      str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
       _            <- ZIO.accessM[Api](_.enqueueParse(valid: _*))
