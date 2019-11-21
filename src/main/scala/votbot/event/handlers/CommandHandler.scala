@@ -10,7 +10,7 @@ import scala.util.matching.Regex
 trait CommandHandler extends EventHandler {
   val commands: List[String]
   val description: String
-  val helpMessage: String = "Commands " + commands.mkString("[", ", ", "]") + " - " + description
+  def helpMessage: String = "Commands " + commands.mkString("[", ", ", "]") + " - " + description
 
   def response(channel: String): ZIO[VotbotEnv, Throwable, Unit]
 

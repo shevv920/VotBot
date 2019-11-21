@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import pureconfig.generic.auto._
 import votbot.config.Config
 import votbot.event.Event._
-import votbot.event.handlers.Quotes
+import votbot.event.handlers.{Help, Quotes}
 import votbot.event.{BaseEventHandler, Event, EventHandler}
 import votbot.model.Bot.State
 import votbot.model.Irc.{Channel, RawMessage, User}
@@ -43,7 +43,7 @@ object Main extends App {
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[String, Channel])
-          handlers <- Ref.make(List[EventHandler](Quotes))
+          handlers <- Ref.make(List[EventHandler](Quotes, Help))
           users    <- Ref.make(Set.empty[User])
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
           override val knownUsers: Ref[Set[User]] = users
