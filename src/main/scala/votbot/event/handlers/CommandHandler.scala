@@ -10,14 +10,14 @@ import scala.util.matching.Regex
 trait CommandHandler extends EventHandler {
   val commands: List[String]
   val description: String
-  def helpMessage: String = "Commands " + commands.mkString("[", ", ", "]") + " - " + description //fixme escape commands strings
+  def helpMessage: String = commands.mkString("[", ", ", "]") + " - " + description //fixme escape commands strings
 
-  def response(channel: String): ZIO[VotbotEnv, Throwable, Unit]
+  def response(channel: String, command: String, arg: String): ZIO[VotbotEnv, Throwable, Unit]
 
   private def mkRegex: ZIO[VotbotEnv, Throwable, Regex] =
     for {
       botNick  <- ZIO.accessM[BotState](_.state.get).map(_.nick)
-      regexStr <- ZIO.effect("(?i)" + botNick + ".{1,2}" + commands.mkString("|") + ".*")
+      regexStr <- ZIO.effect("(?i)" + botNick + ".{1,2}" + commands.mkString("(", "|", ")") + "\\s?(.*)?")
       regex    <- ZIO.effect(regexStr.r)
     } yield regex
 
@@ -25,8 +25,8 @@ trait CommandHandler extends EventHandler {
     for {
       regex <- mkRegex
       _ <- ZIO.whenCase(event) {
-            case cm: ChannelMessage if regex.findFirstIn(cm.msg).nonEmpty =>
-              response(cm.channel)
+            case ChannelMessage(sender, channel, regex(cmd, arg)) =>
+              response(channel, cmd, arg)
           }
     } yield ()
 }
