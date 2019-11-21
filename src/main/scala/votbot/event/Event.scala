@@ -2,14 +2,14 @@ package votbot.event
 
 import votbot.Main.VotbotEnv
 import votbot.model.Irc
-import votbot.model.Irc.{ Command, Prefix, RawMessage }
+import votbot.model.Irc.{ ChannelMember, ChannelMode, Command, Prefix, RawMessage }
 import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
 
 object Event {
   sealed trait Event
-  trait IncomingMessage extends Event {val sender: String; val msg: String }
+  trait IncomingMessage extends Event { val sender: String; val msg: String }
 
   final case class ChannelMessage(sender: String, channel: String, msg: String)             extends IncomingMessage
   final case class PrivateMessage(sender: String, msg: String)                              extends IncomingMessage
@@ -26,6 +26,7 @@ object Event {
   final case class Welcome(nick: String, host: String)                                      extends Event
   final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
   final case class Quit(user: String, reason: String)                                       extends Event
+  final case class NamesList(channel: String, members: List[(String, List[ChannelMode])])   extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
@@ -52,8 +53,20 @@ object Event {
           }
         case RawMessage(Command.Numeric(Irc.Numeric.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
           Welcome(args.head, prefix.host)
-        case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
-          Numeric(cmd, args, prefix)
+        case RawMessage(Command.Numeric(Irc.Numeric.RPL_NAMREPLY), args, _) =>
+          val channel = args(2)
+          val members = args.last
+            .split(" ")
+            .map {
+              case n if n.startsWith("@") =>
+                (n.drop(1), List(ChannelMode("o", Some(n.drop(1)))))
+              case n if n.startsWith("+") =>
+                (n.drop(1), List(ChannelMode("v", Some(n.drop(1)))))
+              case n =>
+                (n, List.empty)
+            }
+            .toList
+          NamesList(channel, members)
         case RawMessage(Command.Join, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(state.nick) =>
           BotJoin(channel.mkString(", "))
         case RawMessage(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(state.nick) =>
@@ -69,6 +82,8 @@ object Event {
             Notice(prefix.nick, args.last)
         case RawMessage(Command.Quit, args, Some(prefix)) =>
           Quit(prefix.nick, args.mkString)
+        case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
+          Numeric(cmd, args, prefix)
         case _ => Unknown(ircMsg)
       }
     } yield event

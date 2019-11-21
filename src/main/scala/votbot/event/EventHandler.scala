@@ -1,7 +1,7 @@
 package votbot.event
 
 import votbot.Main.VotbotEnv
-import votbot.event.Event.{ BotJoin, BotPart, Connected, Event, Join, Numeric, Part, Ping, Quit, Welcome }
+import votbot.event.Event.{ BotJoin, BotPart, Connected, Event, Join, NamesList, Numeric, Part, Ping, Quit, Welcome }
 import votbot.model.Irc.Numeric.{ ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_NAMREPLY, RPL_YOURHOST }
 import votbot.model.Irc._
 import votbot.{ Api, BotState, Configuration }
@@ -56,24 +56,39 @@ trait BaseEventHandler extends EventHandler {
               api.addChannel(Channel(chName, List.empty, Set.empty))
             case BotPart(channel) =>
               api.removeChannel(channel)
-            case Join(user, channel) =>
-              api.addChannelMember(channel, ChannelMember(user, List.empty))
+            case Join(name, channel) =>
+              for {
+                user <- api.getOrCreateUser(name)
+                _    <- api.addChannelMember(channel, ChannelMember(user, List.empty))
+              } yield ()
             case Part(user, channel, reason) =>
               api.removeChannelMember(channel, user)
-            case Numeric(RPL_NAMREPLY, args, prefix) if args.size > 2 =>
-              val names = args.last.split(" ").map {
-                case n if n.startsWith("@") =>
-                  ChannelMember(n.drop(1), List(ChannelMode("o", Some(n.drop(1)))))
-                case n if n.startsWith("+") =>
-                  ChannelMember(n.drop(1), List(ChannelMode("v", Some(n.drop(1)))))
-                case n =>
-                  ChannelMember(n, List.empty)
-              }
-              api.addChannelMember(args(2), names: _*)
+            case NamesList(chName, members) =>
+              for {
+                channelMembers <- ZIO.foreach(members) { tuple =>
+                                   for {
+                                     user   <- api.getOrCreateUser(tuple._1)
+                                     modes  = tuple._2
+                                     member = ChannelMember(user, modes)
+                                   } yield member
+                                 }
+                _ <- ZIO.foreach(channelMembers)(api.addChannelMember(chName, _))
+              } yield ()
             case Numeric(RPL_ENDOFNAMES, args, prefix) =>
               ZIO.unit
             case Quit(user, reason) =>
-              ???
+              for {
+                user <- api.findUser(user)
+                _ <- ZIO.when(user.nonEmpty) {
+                      for {
+                        _        <- api.removeUser(user.get)
+                        channels = user.get.channels
+                        _ <- ZIO.foreach(channels) { ch =>
+                              api.removeChannelMember(ch.name, user.get.name)
+                            }
+                      } yield ()
+                    }
+              } yield ()
           }
       handlers <- customHandlers.get
       _        <- ZIO.foreach(handlers)(handler => handler.handle(event))

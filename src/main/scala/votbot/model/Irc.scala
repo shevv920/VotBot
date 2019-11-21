@@ -179,5 +179,6 @@ object Irc {
 
   final case class Channel(name: String, modes: List[ChannelMode], members: Set[ChannelMember])
   final case class ChannelMode(mode: String, args: Option[String])
-  final case class ChannelMember(name: String, modes: List[ChannelMode])
+  final case class ChannelMember(user: User, modes: List[ChannelMode])
+  final case class User(name: String, channels: Set[Channel])
 }
