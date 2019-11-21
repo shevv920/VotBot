@@ -8,13 +8,14 @@ import zio.console._
 import zio.{Task, UIO, ZIO}
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 object MsgParser {
   val separator        = " "
   val messageDelimiter = "\r\n"
   //final val prefixRegexp = """(?i):([a-zA-Z0-9\[\]\\\-`{}^]+)!(\w+)@(.*)""".r
-  val userPrefix = """:(.*)!(.*)@(.*)""".r
-  val hostPrefix = """:(.*) """.r
+  val userPrefix: Regex = """:(.*)!(.*)@(.*)""".r
+  val hostPrefix: Regex = """:(.*) """.r
 
   def parse(raw: String): Task[RawMessage] =
     ZIO.effect {

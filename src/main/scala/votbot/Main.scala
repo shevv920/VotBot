@@ -15,7 +15,6 @@ import zio.clock.Clock
 import zio.console.{Console, _}
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
-import zio.nio.file.Path
 import zio.random.Random
 
 object Main extends App {
