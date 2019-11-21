@@ -8,7 +8,7 @@ import votbot.event.Event._
 import votbot.event.handlers.Quotes
 import votbot.event.{BaseEventHandler, Event, EventHandler}
 import votbot.model.Bot.State
-import votbot.model.Irc.{Channel, RawMessage}
+import votbot.model.Irc.{Channel, RawMessage, User}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -35,7 +35,7 @@ object Main extends App {
     mainLogic
       .provideSomeM(
         for {
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[config.Config](Paths.get("../application.conf")))
+          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("../application.conf")))
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
@@ -43,7 +43,9 @@ object Main extends App {
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[String, Channel])
           handlers <- Ref.make(List[EventHandler](Quotes))
+          users    <- Ref.make(Set.empty[User])
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
+          override val knownUsers: Ref[Set[User]] = users
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
           override val state: Ref[State]                       = st
