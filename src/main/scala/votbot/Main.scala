@@ -109,7 +109,7 @@ object Main extends App {
       chunk    = Chunk.fromArray(msgBytes)
       remN     <- channel.write(rem ++ chunk)
       rem      = chunk.drop(remN)
-      _        <- putStrLn("written: " + msg + " remaining: " + remN)
+      _        <- putStrLn("written: " + msg + " remaining: " + rem.length)
       _        <- writer(channel, rem)
     } yield ()
 
