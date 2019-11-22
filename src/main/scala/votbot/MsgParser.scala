@@ -3,9 +3,9 @@ package votbot
 import java.nio.charset.StandardCharsets
 
 import votbot.model.Irc.Command.Unknown
-import votbot.model.Irc.{Command, Prefix, RawMessage}
+import votbot.model.Irc.{ Command, Prefix, RawMessage }
 import zio.console._
-import zio.{Task, UIO, ZIO}
+import zio.{ Task, UIO, ZIO }
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -53,11 +53,11 @@ object MsgParser {
       parseParams(rem, cur :+ param)
     }
 
-  def parser(): ZIO[Api, Throwable, Unit] =
+  def parser(): ZIO[Api with Console, Throwable, Unit] =
     for {
       api        <- ZIO.environment[Api]
       raw        <- api.dequeueParse()
-      _          <- putStrLn("got to parse: " + raw).provide(Console.Live)
+      _          <- putStrLn("got to parse: " + raw)
       ircMessage <- parse(raw)
       _          <- api.enqueueProcess(ircMessage)
     } yield ()

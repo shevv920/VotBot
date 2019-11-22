@@ -102,7 +102,7 @@ object Main extends App {
   private def split(str: String): Task[(Array[String], Array[String])] =
     ZIO.effect(str.split("(?<=\r\n)").filter(_.nonEmpty).span(_.endsWith("\r\n")))
 
-  def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Exception, Unit] =
+  def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Throwable, Unit] =
     for {
       msg      <- ZIO.accessM[Api](_.dequeueOutMessage())
       msgBytes <- MsgParser.msgToByteArray(msg)
