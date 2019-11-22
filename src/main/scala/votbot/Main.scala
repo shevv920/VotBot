@@ -6,14 +6,14 @@ import java.nio.file.Paths
 import pureconfig.generic.auto._
 import votbot.config.Config
 import votbot.event.Event._
-import votbot.event.handlers.{Help, Quotes}
-import votbot.event.{BaseEventHandler, Event, EventHandler}
+import votbot.event.handlers.{ Help, Quotes }
+import votbot.event.{ BaseEventHandler, Event, EventHandler }
 import votbot.model.Bot.State
-import votbot.model.Irc.{Channel, RawMessage, User}
+import votbot.model.Irc.{ Channel, RawMessage, User }
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.console.{Console, _}
+import zio.console.{ Console, _ }
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
@@ -46,7 +46,7 @@ object Main extends App {
           handlers <- Ref.make(List[EventHandler](Quotes, Help))
           users    <- Ref.make(Set.empty[User])
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
-          override val knownUsers: Ref[Set[User]] = users
+          override val knownUsers: Ref[Set[User]]              = users
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
           override val state: Ref[State]                       = st
@@ -102,13 +102,15 @@ object Main extends App {
   private def split(str: String): Task[(Array[String], Array[String])] =
     ZIO.effect(str.split("(?<=\r\n)").filter(_.nonEmpty).span(_.endsWith("\r\n")))
 
-  def writer(channel: AsynchronousSocketChannel): ZIO[VotbotEnv, Exception, Unit] =
+  def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Exception, Unit] =
     for {
       msg      <- ZIO.accessM[Api](_.dequeueOutMessage())
       msgBytes <- MsgParser.msgToByteArray(msg)
-      _        <- channel.write(Chunk.fromArray(msgBytes))
-      _        <- putStrLn("written: " + msg)
-      _        <- writer(channel)
+      chunk    = Chunk.fromArray(msgBytes)
+      remN     <- channel.write(rem ++ chunk)
+      rem      = chunk.drop(remN)
+      _        <- putStrLn("written: " + msg + " remaining: " + remN)
+      _        <- writer(channel, rem)
     } yield ()
 
   def processor(): ZIO[VotbotEnv, Throwable, Unit] =
