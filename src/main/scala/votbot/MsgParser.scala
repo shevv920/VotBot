@@ -17,7 +17,7 @@ object MsgParser {
   val userPrefix: Regex = """:(.*)!(.*)@(.*)""".r
   val hostPrefix: Regex = """:(.*) """.r
 
-  def parse(raw: String): Task[RawMessage] =
+  private def parse(raw: String): Task[RawMessage] =
     ZIO.effect {
       val (prefix, commandParams) =
         if (raw.startsWith(":"))
