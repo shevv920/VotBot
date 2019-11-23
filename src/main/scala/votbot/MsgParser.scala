@@ -27,7 +27,7 @@ object MsgParser {
         if (commandParams.indexOf(' ') == -1) (commandParams, "")
         else commandParams.splitAt(commandParams.indexOf(' '))
       val cmd =
-        if (command.forall(_.isDigit))
+        if (command.nonEmpty && command.forall(_.isDigit))
           Command.Numeric(command)
         else
           Command.withNameOption(command.toUpperCase).getOrElse(Unknown(command))
@@ -65,7 +65,6 @@ object MsgParser {
   def msgToByteArray(msg: RawMessage): UIO[Array[Byte]] =
     ZIO.effectTotal {
       val str =
-        separator +
           msg.cmd.entryName.toUpperCase() +
           separator +
           msg.args.mkString(separator) +
