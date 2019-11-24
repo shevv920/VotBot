@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import pureconfig.generic.auto._
-import votbot.config.Config
 import votbot.event.Event._
 import votbot.event.handlers.{ Help, Quotes }
 import votbot.event.{ BaseEventHandler, Event, EventHandler }

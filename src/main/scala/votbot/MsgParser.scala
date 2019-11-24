@@ -14,8 +14,9 @@ object MsgParser {
   val separator        = " "
   val messageDelimiter = "\r\n"
   //final val prefixRegexp = """(?i):([a-zA-Z0-9\[\]\\\-`{}^]+)!(\w+)@(.*)""".r
-  val userPrefix: Regex = """:(.*)!(.*)@(.*)""".r
-  val hostPrefix: Regex = """:(.*) """.r
+  val userPrefix: Regex          = """:(.*)!(.*)@(.*)""".r
+  val hostPrefix: Regex          = """:(.*) """.r
+  val numericCommandRegex: Regex = """(\d{3})""".r
 
   def parse(raw: String): Task[RawMessage] =
     ZIO.effect {
@@ -27,10 +28,11 @@ object MsgParser {
         if (commandParams.indexOf(' ') == -1) (commandParams, "")
         else commandParams.splitAt(commandParams.indexOf(' '))
       val cmd =
-        if (command.nonEmpty && command.forall(_.isDigit))
-          Command.Numeric(command)
-        else
-          Command.withNameOption(command.toUpperCase).getOrElse(Unknown(command))
+        command match {
+          case numericCommandRegex(n) => Command.Numeric(n)
+          case _                      => Command.withNameOption(command.toUpperCase).getOrElse(Unknown(command))
+        }
+
       RawMessage(cmd, parseParams(params.trim), parsePrefix(prefix))
     }
 
@@ -65,7 +67,7 @@ object MsgParser {
   def msgToByteArray(msg: RawMessage): UIO[Array[Byte]] =
     ZIO.effectTotal {
       val str =
-          msg.cmd.entryName.toUpperCase() +
+        msg.cmd.entryName.toUpperCase() +
           separator +
           msg.args.mkString(separator) +
           messageDelimiter

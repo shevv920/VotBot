@@ -36,10 +36,14 @@ object All
     extends DefaultRunnableSpec(
       suite("all")(
         testM("MsgParser should parse simple PRIVMSG") {
-          val msg = "PRIVMSG votbot message"
           MsgParser
-            .parse(msg)
+            .parse("PRIVMSG votbot message")
             .map(m => assert(m, equalTo(Irc.RawMessage(Irc.Command.Privmsg, Vector("votbot", "message")))))
+        },
+        testM("MsgParser should parse numeric msg") {
+          MsgParser
+            .parse(Irc.Numeric.RPL_WELCOME + " welcome")
+            .map(m => assert(m, equalTo(Irc.RawMessage(Irc.Command.Numeric(Irc.Numeric.RPL_WELCOME), Vector("welcome")))))
         },
         testM("test1") {
           val msg = "test message"
