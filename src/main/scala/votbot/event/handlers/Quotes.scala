@@ -1,6 +1,5 @@
 package votbot.event.handlers
 import votbot.Api
-import votbot.Main.VotbotEnv
 import zio.ZIO
 import zio.nio.file.{ Files, Path }
 import zio.random.Random
@@ -10,7 +9,7 @@ object Quotes extends CommandHandler {
 
   override val commands: List[String] = List("q", "й", "quote", "йгщеу")
 
-  override def response(channel: String, cmd: String, args: String): ZIO[VotbotEnv, Throwable, Unit] =
+  override def response(channel: String, cmd: String, args: String): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api    <- ZIO.environment[Api]
       random <- ZIO.access[Random](_.random)

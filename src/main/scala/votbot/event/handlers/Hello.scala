@@ -1,12 +1,11 @@
 package votbot.event.handlers
 import votbot.Api
-import votbot.Main.VotbotEnv
 import votbot.event.Event.{ Event, Join }
 import votbot.event.EventHandler
 import zio.ZIO
 
 object Hello extends EventHandler {
-  override def handle(event: Event): ZIO[VotbotEnv, Throwable, Unit] =
+  override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api <- ZIO.environment[Api]
       _ <- ZIO.whenCase(event) {

@@ -1,6 +1,5 @@
 package votbot.event.handlers
 import votbot.BotState
-import votbot.Main.VotbotEnv
 import votbot.event.Event.{ ChannelMessage, Event }
 import votbot.event.EventHandler
 import zio.ZIO
@@ -12,16 +11,9 @@ trait CommandHandler extends EventHandler {
   val description: String
   def helpMessage: String = commands.mkString("[", ", ", "]") + " - " + description //fixme escape commands strings
 
-  def response(channel: String, command: String, arg: String): ZIO[VotbotEnv, Throwable, Unit]
+  def response(channel: String, command: String, arg: String): ZIO[HandlerEnv, Throwable, Unit]
 
-  private def mkRegex: ZIO[VotbotEnv, Throwable, Regex] =
-    for {
-      botNick  <- ZIO.accessM[BotState](_.state.get).map(_.nick)
-      regexStr <- ZIO.effect("(?i)" + botNick + ".{1,2}" + commands.mkString("(", "|", ")") + "\\s?(.*)?")
-      regex    <- ZIO.effect(regexStr.r)
-    } yield regex
-
-  override def handle(event: Event): ZIO[VotbotEnv, Throwable, Unit] =
+  override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       regex <- mkRegex
       _ <- ZIO.whenCase(event) {
@@ -29,4 +21,11 @@ trait CommandHandler extends EventHandler {
               response(channel, cmd, arg)
           }
     } yield ()
+
+  private def mkRegex: ZIO[BotState, Throwable, Regex] =
+    for {
+      botNick  <- ZIO.accessM[BotState](_.state.get).map(_.nick)
+      regexStr <- ZIO.effect("(?i)" + botNick + ".{1,2}" + commands.mkString("(", "|", ")") + "\\s?(.*)?")
+      regex    <- ZIO.effect(regexStr.r)
+    } yield regex
 }

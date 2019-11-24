@@ -1,8 +1,9 @@
 package votbot.event
 
 import votbot.Main.VotbotEnv
+import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{ ChannelMember, ChannelMode, Command, Prefix, RawMessage }
+import votbot.model.Irc.{ ChannelMode, Command, Prefix, RawMessage }
 import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
