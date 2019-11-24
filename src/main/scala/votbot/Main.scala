@@ -5,8 +5,8 @@ import java.nio.file.Paths
 
 import pureconfig.generic.auto._
 import votbot.event.Event._
-import votbot.event.handlers.{ Help, Quotes }
-import votbot.event.{ BaseEventHandler, Event, EventHandler }
+import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
+import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.Irc.{ Channel, RawMessage, User }
 import zio._

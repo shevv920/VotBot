@@ -151,7 +151,10 @@ object Irc {
   object RawMessage {
 
     def apply(cmd: Command, args: String*): RawMessage =
-      new RawMessage(cmd, args.toVector.updated(args.size - 1, ":" + args.last), None)
+      if (args.size > 1)
+        new RawMessage(cmd, args.toVector.updated(args.size - 1, ":" + args.last), None)
+      else
+        new RawMessage(cmd, args.toVector, None)
   }
 
   final case class Prefix(nick: String, username: String, host: String)

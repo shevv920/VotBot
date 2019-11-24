@@ -1,7 +1,7 @@
 package votbot
 import votbot.model.Irc
 import zio.test.Assertion.equalTo
-import zio.test.{assert, suite, testM}
+import zio.test.{ assert, suite, testM }
 
 object MsgParserSpec {
 
