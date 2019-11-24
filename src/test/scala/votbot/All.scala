@@ -5,15 +5,15 @@ import java.nio.charset.StandardCharsets
 import votbot.event.Event
 import votbot.event.Event.Event
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, Command, RawMessage, User}
+import votbot.model.Irc.{ Channel, RawMessage, User }
+import zio.console._
 import zio.test.Assertion._
 import zio.test._
-import zio.{Managed, Queue, Ref, ZIO}
-import zio.console._
+import zio.{ Managed, Queue, Ref, ZIO }
 
 object Base {
 
-  val env = for {
+  val env: ZIO[Any, Nothing, LiveApi with Console.Live] = for {
     inQ   <- Queue.unbounded[String]
     outQ  <- Queue.unbounded[RawMessage]
     pQ    <- Queue.unbounded[RawMessage]
@@ -35,15 +35,26 @@ object Base {
 object All
     extends DefaultRunnableSpec(
       suite("all")(
+        testM("MsgParser should parse simple PRIVMSG") {
+          val msg = "PRIVMSG votbot message"
+          MsgParser
+            .parse(msg)
+            .map(m => assert(m, equalTo(Irc.RawMessage(Irc.Command.Privmsg, Vector("votbot", "message")))))
+        },
         testM("test1") {
-          val msg = RawMessage(Command.Privmsg, "votbot", "message")
+          val msg = "test message"
           for {
             api      <- ZIO.environment[Api]
-            ba       <- MsgParser.msgToByteArray(msg)
-            _        <- api.enqueueParse(new String(ba, StandardCharsets.UTF_8))
+            _        <- api.sendPrivateMessage("votbot", msg)
+            oMsg     <- api.dequeueOutMessage()
+            ba       <- MsgParser.msgToByteArray(oMsg)
+            sMsg     = new String(ba, StandardCharsets.UTF_8)
+            _        <- api.enqueueParse(sMsg)
             _        <- MsgParser.parser()
             parseRes <- api.dequeueProcess()
-          } yield assert(parseRes, equalTo(msg))
-        }.provideManaged(Base.envM)
-      )
+          } yield assert(parseRes.cmd, equalTo(Irc.Command.Privmsg)) &&
+            assert(parseRes.prefix, isNone) &&
+            assert(parseRes.args.head, equalTo("votbot"))
+        }
+      ).provideManaged(Base.envM)
     )
