@@ -45,7 +45,7 @@ trait LiveApi extends Api {
       ch    <- getChannel(chName)
       user  <- getUser(uName)
       nUser = user.copy(channels = user.channels + ch.name)
-      _     <- knownUsers.update(u => u + (user.name -> nUser))
+      _     <- knownUsers.update(u => u + (user.name.toLowerCase -> nUser))
     } yield ()
   override def getUser(name: String): Task[User] =
     for {
@@ -62,7 +62,7 @@ trait LiveApi extends Api {
   override def getOrCreateUser(name: String): Task[User] =
     for {
       users <- knownUsers.get
-      user  <- ZIO.effect(users.getOrElse(name, User(name, Set.empty)))
+      user  <- ZIO.effect(users.getOrElse(name.toLowerCase, User(name, Set.empty)))
       _     <- addUser(user)
     } yield user
   override def addUser(user: User): Task[Unit] =
@@ -87,11 +87,7 @@ trait LiveApi extends Api {
       _       <- knownChannels.update(m => m + (chName -> nCh))
     } yield ()
   override def addChannelMember(chName: String, member: User): Task[Unit] =
-    for {
-      channel <- getChannel(chName)
-      nCh     = channel.copy(members = channel.members + member.name)
-      _       <- knownChannels.update(m => m + (chName -> nCh))
-    } yield ()
+    addChannelMember(chName, member.name)
   override def getChannel(chName: String): Task[Channel] =
     for {
       channels <- knownChannels.get
