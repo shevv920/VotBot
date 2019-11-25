@@ -2,7 +2,7 @@ package votbot.event.handlers
 import votbot.event.Event._
 import votbot.event.EventHandler
 import votbot.model.Irc.Numeric.{ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST}
-import votbot.model.Irc.{Channel, ChannelMember, Command, RawMessage}
+import votbot.model.Irc.{Channel, Command, RawMessage}
 import votbot.{Api, BotState, Configuration}
 import zio.random.Random
 import zio.{Ref, ZIO}
@@ -54,7 +54,9 @@ trait BaseEventHandler extends EventHandler {
             case Join(name, channel) =>
               for {
                 user <- api.getOrCreateUser(name)
-                _    <- api.addChannelMember(channel, ChannelMember(user, List.empty))
+                ch   <- api.getChannel(channel)
+                _    <- api.addChannelMember(ch.name, user)
+                _    <- api.addChannelToUser(ch.name, user.name)
               } yield ()
             case Part(user, channel, reason) =>
               api.removeChannelMember(channel, user)
@@ -62,10 +64,9 @@ trait BaseEventHandler extends EventHandler {
               for {
                 channelMembers <- ZIO.foreach(members) { tuple =>
                                    for {
-                                     user   <- api.getOrCreateUser(tuple._1)
-                                     modes  = tuple._2
-                                     member = ChannelMember(user, modes)
-                                   } yield member
+                                     user  <- api.getOrCreateUser(tuple._1)
+                                     modes = tuple._2
+                                   } yield user
                                  }
                 _ <- ZIO.foreach(channelMembers)(api.addChannelMember(chName, _))
               } yield ()
@@ -79,7 +80,7 @@ trait BaseEventHandler extends EventHandler {
                         _        <- api.removeUser(user.get)
                         channels = user.get.channels
                         _ <- ZIO.foreach(channels) { ch =>
-                              api.removeChannelMember(ch.name, user.get.name)
+                              api.removeChannelMember(ch, user.get.name)
                             }
                       } yield ()
                     }

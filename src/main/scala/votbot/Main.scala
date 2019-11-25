@@ -5,14 +5,14 @@ import java.nio.file.Paths
 
 import pureconfig.generic.auto._
 import votbot.event.Event._
-import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
-import votbot.event.{ Event, EventHandler }
+import votbot.event.handlers.{BaseEventHandler, Help, Quotes}
+import votbot.event.{Event, EventHandler}
 import votbot.model.Bot.State
-import votbot.model.Irc.{ Channel, RawMessage, User }
+import votbot.model.Irc.{Channel, RawMessage, User}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.console.{ Console, _ }
+import zio.console.{Console, _}
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
@@ -43,9 +43,9 @@ object Main extends App {
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[String, Channel])
           handlers <- Ref.make(List[EventHandler](Quotes, Help))
-          users    <- Ref.make(Set.empty[User])
+          users    <- Ref.make(Map.empty[String, User])
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
-          override val knownUsers: Ref[Set[User]]              = users
+          override val knownUsers: Ref[Map[String, User]]      = users
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
           override val state: Ref[State]                       = st
@@ -53,7 +53,7 @@ object Main extends App {
           override val processQ: Queue[RawMessage]             = pQ
           override val outMessageQ: Queue[RawMessage]          = outQ
           override val eventQ: Queue[Event]                    = evtQ
-          override val channels: Ref[Map[String, Channel]]     = chs
+          override val knownChannels: Ref[Map[String, Channel]]     = chs
         }
       )
       .either

@@ -1,9 +1,9 @@
 package votbot.event
 import votbot.Api
-import votbot.event.Event.{ Connected, Ping }
+import votbot.event.Event.{BotJoin, Connected, Join, Ping}
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{ Command, RawMessage }
+import votbot.model.Irc.{Channel, Command, RawMessage}
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -33,6 +33,28 @@ object BaseEventHandlerSpec {
         nickCmd <- api.dequeueOutMessage()
         userCmd <- api.dequeueOutMessage()
       } yield assert(nickCmd.cmd, equalTo(Irc.Command.Nick)) && assert(userCmd.cmd, equalTo(Irc.Command.User))
+    },
+    testM("BotJoin creates channel") {
+      for {
+        api     <- ZIO.environment[Api]
+        handler <- ZIO.environment[BaseEventHandler]
+        chName  = "#votbot"
+        _       <- handler.handle(BotJoin(chName))
+        ch      <- api.getChannel(chName)
+      } yield assert(ch, equalTo(Channel(chName, List(), Set())))
+    },
+    testM("BotJoin creates channel, Join adds user to channel") {
+      for {
+        api     <- ZIO.environment[Api]
+        handler <- ZIO.environment[BaseEventHandler]
+        uName   = "testName"
+        chName  = "#votbot"
+        _       <- handler.handle(BotJoin(chName))
+        _       <- handler.handle(Join(uName, chName))
+        ch      <- api.getChannel(chName)
+        user    <- api.getUser(uName)
+      } yield assert(ch, equalTo(Channel(chName, List.empty, Set(user.name)))) &&
+        assert(user.channels, contains(ch.name))
     }
   )
 }
