@@ -68,9 +68,15 @@ trait LiveApi extends Api {
   override def addUser(user: User): Task[Unit] =
     knownUsers.update(m => m + (user.name.toLowerCase -> user)).unit
   override def removeUser(user: User): Task[Unit] =
-    knownUsers.update(m => m - user.name.toLowerCase).unit
+    for {
+      _ <- ZIO.foreach(user.channels) { chName =>
+            removeChannelMember(chName, user.name)
+          }
+      _ <- knownUsers.update(u => u - user.name)
+    } yield ()
   override def removeUser(userName: String): Task[Unit] =
-    knownUsers.update(users => users - userName.toLowerCase).unit
+    getUser(userName.toLowerCase)
+      .map(user => removeUser(user))
   override def removeChannelMember(chName: String, memberName: String): Task[Unit] =
     for {
       channel <- getChannel(chName)
@@ -96,9 +102,9 @@ trait LiveApi extends Api {
                   .mapError(_ => new Exception("Channel does not exist: " + chName))
     } yield channel
   override def removeChannel(channelName: String): UIO[Unit] =
-    knownChannels.update(_ - channelName).unit
+    knownChannels.update(_ - channelName.toLowerCase).unit
   override def addChannel(channel: Channel): UIO[Unit] =
-    knownChannels.update(_ + (channel.name -> channel)).unit
+    knownChannels.update(_ + (channel.name.toLowerCase -> channel)).unit
   override def allChannels(): Task[List[Channel]] =
     knownChannels.get.map(_.values.toList)
   override def enqueueEvent(evt: Event*): UIO[Unit] =

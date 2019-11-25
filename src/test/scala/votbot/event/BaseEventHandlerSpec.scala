@@ -43,7 +43,7 @@ object BaseEventHandlerSpec {
         ch      <- api.getChannel(chName)
       } yield assert(ch, equalTo(Channel(chName, List(), Set())))
     },
-    testM("BotJoin creates channel, Join adds user to channel and channel to user") {
+    testM("event BotJoin creates channel, event Join adds user to channel and channel to user's channels") {
       for {
         api     <- ZIO.environment[Api]
         handler <- ZIO.environment[BaseEventHandler]

@@ -38,6 +38,30 @@ object ApiSpec {
         _      <- api.addChannelToUser(chName, user.name)
         nUser  <- api.getUser(user.name)
       } yield assert(nUser.channels, equalTo(Set(chName)))
+    },
+    testM("removeChannel removes channel") {
+      for {
+        api        <- ZIO.environment[Api]
+        chName     = "#votbot"
+        srcChannel = Channel(chName, List.empty, Set.empty)
+        _          <- api.addChannel(srcChannel)
+        _          <- api.removeChannel(chName)
+        res        <- api.allChannels()
+      } yield assert(res, isEmpty)
+    },
+    testM("removeUser removes user from knownUsers and all channels") {
+      for {
+        api        <- ZIO.environment[Api]
+        chName     = "#votbot"
+        srcChannel = Channel(chName, List.empty, Set.empty)
+        _          <- api.addChannel(srcChannel)
+        uName      = "votbot"
+        srcUser    = User(uName, Set(chName.toLowerCase))
+        _          <- api.addUser(srcUser)
+        _          <- api.removeUser(srcUser)
+        mbUser     <- api.findUser(srcUser.name)
+        channels   <- api.allChannels()
+      } yield assert(mbUser, isNone) && assert(channels.filter(_.members.contains(uName)), isEmpty)
     }
   )
 }
