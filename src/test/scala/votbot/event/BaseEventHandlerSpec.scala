@@ -3,7 +3,7 @@ import votbot.Api
 import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, ChannelKey, Command, RawMessage, UserKey}
+import votbot.model.Irc.{Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey}
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -43,7 +43,7 @@ object BaseEventHandlerSpec {
         ch      <- api.getChannel(chName)
       } yield assert(ch, equalTo(Channel(chName, List(), Set())))
     },
-    testM("event BotJoin creates channel, event Join adds user to channel and channel to user's channels") {
+    testM("event Join adds user to channel and channel to user's channels") {
       for {
         api     <- ZIO.environment[Api]
         handler <- ZIO.environment[BaseEventHandler]
@@ -86,6 +86,21 @@ object BaseEventHandlerSpec {
         ch      <- api.getChannel(chName)
         u       <- api.getUser(uName)
       } yield assert(ch.members, isEmpty) && assert(u.channels, isEmpty)
+    },
+    testM("NamesList add list of users to channel members") {
+      for {
+        api     <- ZIO.environment[Api]
+        handler <- ZIO.environment[BaseEventHandler]
+        chName  = "#votbot"
+        _       <- handler.handle(BotJoin(chName))
+        names = List(
+          ("nick1", List.empty[ChannelMode]),
+          ("nick2", List.empty[ChannelMode]),
+          ("nick3", List.empty[ChannelMode])
+        )
+        _ <- handler.handle(NamesList(chName, names))
+        channel <- api.getChannel(chName)
+      } yield assert(channel.members.size, equalTo(3))
     }
   )
 }
