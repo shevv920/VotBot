@@ -188,8 +188,10 @@ object Irc {
   final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
   final case class ChannelMode(mode: String, args: Option[String])
   final case class User(name: String, channels: Set[ChannelKey])
-  implicit def strToChannelKey(str: String): ChannelKey = ChannelKey(str.toLowerCase)
-  implicit def channelKeyToStr(key: ChannelKey): String = key.str
-  implicit def userKeyToStr(key: UserKey): String       = key.str
-  implicit def strToUserKey(str: String): UserKey       = UserKey(str.toLowerCase)
+  implicit def strToChannelKey(str: String): ChannelKey   = ChannelKey(str.toLowerCase)
+  implicit def channelKeyToStr(key: ChannelKey): String   = key.str
+  implicit def userKeyToStr(key: UserKey): String         = key.str
+  implicit def strToUserKey(str: String): UserKey         = UserKey(str.toLowerCase)
+  implicit def userToKey(user: User): UserKey             = UserKey(user.name.toLowerCase)
+  implicit def channelToKey(channel: Channel): ChannelKey = ChannelKey(channel.name.toLowerCase)
 }

@@ -20,7 +20,7 @@ object ApiSpec {
       for {
         api        <- ZIO.environment[Api]
         chName     = "#votbot"
-        uName      = "votbot"
+        uName      = "votBot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
         ch         <- api.getChannel(chName)

@@ -8,7 +8,7 @@ import votbot.event.Event._
 import votbot.event.handlers.{BaseEventHandler, Help, Quotes}
 import votbot.event.{Event, EventHandler}
 import votbot.model.Bot.State
-import votbot.model.Irc.{Channel, RawMessage, User}
+import votbot.model.Irc.{Channel, ChannelKey, RawMessage, User, UserKey}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -41,19 +41,19 @@ object Main extends App {
           outQ     <- Queue.unbounded[RawMessage]
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
-          chs      <- Ref.make(Map.empty[String, Channel])
+          chs      <- Ref.make(Map.empty[ChannelKey, Channel])
           handlers <- Ref.make(List[EventHandler](Quotes, Help))
-          users    <- Ref.make(Map.empty[String, User])
+          users    <- Ref.make(Map.empty[UserKey, User])
         } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
-          override val knownUsers: Ref[Map[String, User]]      = users
-          override val customHandlers: Ref[List[EventHandler]] = handlers
-          override val config: Config                          = cfg
-          override val state: Ref[State]                       = st
-          override val parseQ: Queue[String]                   = inQ
-          override val processQ: Queue[RawMessage]             = pQ
-          override val outMessageQ: Queue[RawMessage]          = outQ
-          override val eventQ: Queue[Event]                    = evtQ
-          override val knownChannels: Ref[Map[String, Channel]]     = chs
+          override val knownUsers: Ref[Map[UserKey, User]]          = users
+          override val customHandlers: Ref[List[EventHandler]]      = handlers
+          override val config: Config                               = cfg
+          override val state: Ref[State]                            = st
+          override val parseQ: Queue[String]                        = inQ
+          override val processQ: Queue[RawMessage]                  = pQ
+          override val outMessageQ: Queue[RawMessage]               = outQ
+          override val eventQ: Queue[Event]                         = evtQ
+          override val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
         }
       )
       .either

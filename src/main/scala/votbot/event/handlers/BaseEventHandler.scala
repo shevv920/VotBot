@@ -55,8 +55,8 @@ trait BaseEventHandler extends EventHandler {
               for {
                 user <- api.getOrCreateUser(name)
                 ch   <- api.getChannel(channel)
-                _    <- api.addChannelMember(ch.name, user)
-                _    <- api.addChannelToUser(ch.name, user.name)
+                _    <- api.addChannelMember(ch, user)
+                _    <- api.addChannelToUser(ch, user)
               } yield ()
             case Part(user, channel, reason) =>
               api.removeChannelMember(channel, user)
@@ -74,16 +74,8 @@ trait BaseEventHandler extends EventHandler {
               ZIO.unit
             case Quit(user, reason) =>
               for {
-                user <- api.findUser(user)
-                _ <- ZIO.when(user.nonEmpty) {
-                      for {
-                        _        <- api.removeUser(user.get)
-                        channels = user.get.channels
-                        _ <- ZIO.foreach(channels) { ch =>
-                              api.removeChannelMember(ch, user.get.name)
-                            }
-                      } yield ()
-                    }
+                user <- api.getUser(user)
+                _    <- api.removeUser(user)
               } yield ()
           }
       handlers <- customHandlers.get

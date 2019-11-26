@@ -1,6 +1,6 @@
 package votbot.event
 import votbot.Api
-import votbot.event.Event.{BotJoin, Connected, Join, Ping}
+import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
 import votbot.model.Irc.{Channel, ChannelKey, Command, RawMessage, UserKey}
@@ -55,6 +55,37 @@ object BaseEventHandlerSpec {
         user    <- api.getUser(uName)
       } yield assert(ch.members, equalTo(Set[UserKey](user.name))) &&
         assert(user.channels, equalTo(Set[ChannelKey](ch.name)))
+    },
+    testM("Quit removes user from everywhere") {
+      for {
+        api          <- ZIO.environment[Api]
+        handler      <- ZIO.environment[BaseEventHandler]
+        uName        = "testName"
+        chName       = "#votbot"
+        _            <- handler.handle(BotJoin(chName))
+        _            <- handler.handle(Join(uName, chName))
+        ch           <- api.getChannel(chName)
+        user         <- api.findUser(uName)
+        _            <- handler.handle(Quit(uName, "Leaving."))
+        cleanChannel <- api.getChannel(chName)
+        mbUser       <- api.findUser(uName)
+      } yield assert(ch.members, equalTo(Set[UserKey](uName))) &&
+        assert(user.nonEmpty, isTrue) &&
+        assert(cleanChannel.members, isEmpty) &&
+        assert(mbUser, isNone)
+    },
+    testM("Part removes user from channel and channel from user") {
+      for {
+        api     <- ZIO.environment[Api]
+        handler <- ZIO.environment[BaseEventHandler]
+        uName   = "testName"
+        chName  = "#votbot"
+        _       <- handler.handle(BotJoin(chName))
+        _       <- handler.handle(Join(uName, chName))
+        _       <- handler.handle(Part(uName, chName, "reason"))
+        ch      <- api.getChannel(chName)
+        u       <- api.getUser(uName)
+      } yield assert(ch.members, isEmpty) && assert(u.channels, isEmpty)
     }
   )
 }

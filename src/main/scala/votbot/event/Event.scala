@@ -3,8 +3,8 @@ package votbot.event
 import votbot.Main.VotbotEnv
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{ ChannelMode, Command, Prefix, RawMessage }
-import votbot.{ Api, BotState }
+import votbot.model.Irc.{ChannelMode, Command, Prefix, RawMessage}
+import votbot.{Api, BotState}
 import zio.ZIO
 import zio.console.putStrLn
 
@@ -75,9 +75,9 @@ object Event {
         case RawMessage(Command.Join, args, Some(prefix)) =>
           Join(prefix.nick, args.mkString(", "))
         case RawMessage(Command.Part, args, Some(prefix)) if args.size > 1 =>
-          Part(prefix.nick, args.mkString(", "), prefix.nick)
-        case RawMessage(Command.Part, args, Some(prefix)) =>
           Part(prefix.nick, args.dropRight(1).mkString(", "), args.last) //last - reason
+        case RawMessage(Command.Part, args, Some(prefix)) =>
+          Part(prefix.nick, args.mkString(", "), prefix.nick)
         case RawMessage(Command.Notice, args, Some(prefix)) =>
           if (args.head.startsWith("#"))
             ChannelNotice(prefix.nick, args.head, args.last)

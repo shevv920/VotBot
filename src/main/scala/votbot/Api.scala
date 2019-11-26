@@ -2,7 +2,7 @@ package votbot
 
 import votbot.event.Event.Event
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, User}
+import votbot.model.Irc.{Channel, ChannelKey, User, UserKey}
 import zio._
 
 trait Api {
@@ -10,8 +10,8 @@ trait Api {
   protected val processQ: Queue[Irc.RawMessage]
   protected val outMessageQ: Queue[Irc.RawMessage]
   protected val eventQ: Queue[Event]
-  protected val knownChannels: Ref[Map[String, Channel]]
-  protected val knownUsers: Ref[Map[String, User]]
+  protected val knownChannels: Ref[Map[ChannelKey, Channel]]
+  protected val knownUsers: Ref[Map[UserKey, User]]
 
   def enqueueEvent(evt: Event*): UIO[Unit]
   def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit]
@@ -25,49 +25,55 @@ trait Api {
   def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
   def allChannels(): Task[List[Channel]]
   def addChannel(channel: Channel): UIO[Unit]
-  def removeChannel(chName: String): UIO[Unit]
-  def addChannelMember(chName: String, memberName: String): Task[Unit]
-  def addChannelMember(chName: String, member: User): Task[Unit]
-  def removeChannelMember(chName: String, memberName: String): Task[Unit]
-  def getChannel(chName: String): Task[Channel]
+  def removeChannel(chName: ChannelKey): UIO[Unit]
+  def addChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
+  def addChannelMember(chName: ChannelKey, member: User): Task[Unit]
+  def removeChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
+  def getChannel(chName: ChannelKey): Task[Channel]
   def addUser(user: User): Task[Unit]
-  def removeUser(userName: String): Task[Unit]
+  def removeUser(userName: UserKey): Task[Unit]
   def removeUser(user: User): Task[Unit]
   def getOrCreateUser(name: String): Task[User]
   def findUser(name: String): Task[Option[User]]
   def getUser(name: String): Task[User]
-  def addChannelToUser(chName: String, uName: String): Task[Unit]
+  def addChannelToUser(chName: ChannelKey, uName: UserKey): Task[Unit]
+  def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit]
 }
 
 trait LiveApi extends Api {
-
-  override def addChannelToUser(chName: String, uName: String): Task[Unit] =
+  override def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit] =
+    for {
+      user <- getUser(uName)
+      chs  = user.channels.filterNot(_ == chName)
+      _    <- knownUsers.update(us => us + (uName -> user.copy(channels = chs)))
+    } yield ()
+  override def addChannelToUser(chName: ChannelKey, uName: UserKey): Task[Unit] =
     for {
       ch    <- getChannel(chName)
       user  <- getUser(uName)
       nUser = user.copy(channels = user.channels + ch.name)
-      _     <- knownUsers.update(u => u + (user.name.toLowerCase -> nUser))
+      _     <- knownUsers.update(us => us + (uName -> nUser))
     } yield ()
   override def getUser(name: String): Task[User] =
     for {
       users <- knownUsers.get
       user <- ZIO
-               .fromOption(users.get(name.toLowerCase))
+               .fromOption(users.get(name))
                .mapError(_ => new Exception("User does not exists " + name))
     } yield user
   override def findUser(name: String): Task[Option[User]] =
     for {
       users <- knownUsers.get
-      user  = users.get(name.toLowerCase)
+      user  = users.get(name)
     } yield user
   override def getOrCreateUser(name: String): Task[User] =
     for {
       users <- knownUsers.get
-      user  <- ZIO.effect(users.getOrElse(name.toLowerCase, User(name, Set.empty)))
+      user  <- ZIO.effect(users.getOrElse(name, User(name, Set.empty)))
       _     <- addUser(user)
     } yield user
   override def addUser(user: User): Task[Unit] =
-    knownUsers.update(m => m + (user.name.toLowerCase -> user)).unit
+    knownUsers.update(m => m + (Irc.userToKey(user) -> user)).unit
   override def removeUser(user: User): Task[Unit] =
     for {
       _ <- ZIO.foreach(user.channels) { chName =>
@@ -75,37 +81,38 @@ trait LiveApi extends Api {
           }
       _ <- knownUsers.update(u => u - user.name)
     } yield ()
-  override def removeUser(userName: String): Task[Unit] =
-    getUser(userName.toLowerCase)
+  override def removeUser(userName: UserKey): Task[Unit] =
+    getUser(userName)
       .map(user => removeUser(user))
-  override def removeChannelMember(chName: String, memberName: String): Task[Unit] =
+  override def removeChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit] =
     for {
       channel <- getChannel(chName)
       user    <- getUser(memberName)
       _ <- knownChannels.update(
             m => m + (chName -> channel.copy(members = channel.members - user.name))
           )
+      _ <- removeChannelFromUser(chName, memberName)
     } yield ()
-  override def addChannelMember(chName: String, memberName: String): Task[Unit] =
+  override def addChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit] =
     for {
       channel <- getChannel(chName)
       user    <- getOrCreateUser(memberName)
       nCh     = channel.copy(members = channel.members + user.name)
       _       <- knownChannels.update(m => m + (chName -> nCh))
     } yield ()
-  override def addChannelMember(chName: String, member: User): Task[Unit] =
+  override def addChannelMember(chName: ChannelKey, member: User): Task[Unit] =
     addChannelMember(chName, member.name)
-  override def getChannel(chName: String): Task[Channel] =
+  override def getChannel(chName: ChannelKey): Task[Channel] =
     for {
       channels <- knownChannels.get
       channel <- ZIO
                   .fromOption(channels.get(chName))
                   .mapError(_ => new Exception("Channel does not exist: " + chName))
     } yield channel
-  override def removeChannel(channelName: String): UIO[Unit] =
-    knownChannels.update(_ - channelName.toLowerCase).unit
+  override def removeChannel(channelName: ChannelKey): UIO[Unit] =
+    knownChannels.update(_ - channelName).unit
   override def addChannel(channel: Channel): UIO[Unit] =
-    knownChannels.update(_ + (channel.name.toLowerCase -> channel)).unit
+    knownChannels.update(_ + (Irc.channelToKey(channel) -> channel)).unit
   override def allChannels(): Task[List[Channel]] =
     knownChannels.get.map(_.values.toList)
   override def enqueueEvent(evt: Event*): UIO[Unit] =
