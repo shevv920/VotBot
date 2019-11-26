@@ -3,7 +3,7 @@ import votbot.Api
 import votbot.event.Event.{BotJoin, Connected, Join, Ping}
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, Command, RawMessage}
+import votbot.model.Irc.{Channel, ChannelKey, Command, RawMessage, UserKey}
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -53,8 +53,8 @@ object BaseEventHandlerSpec {
         _       <- handler.handle(Join(uName, chName))
         ch      <- api.getChannel(chName)
         user    <- api.getUser(uName)
-      } yield assert(ch, equalTo(Channel(chName, List.empty, Set(user.name)))) &&
-        assert(user.channels, contains(ch.name))
+      } yield assert(ch.members, equalTo(Set[UserKey](user.name))) &&
+        assert(user.channels, equalTo(Set[ChannelKey](ch.name)))
     }
   )
 }

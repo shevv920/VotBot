@@ -3,6 +3,8 @@ package votbot.model
 import enumeratum.EnumEntry.Uppercase
 import enumeratum.{Enum, EnumEntry}
 
+import scala.language.implicitConversions
+
 object Irc {
 
   object Numeric {
@@ -180,7 +182,14 @@ object Irc {
     final case class Numeric(cmd: String) extends Command
   }
 
-  final case class Channel(name: String, modes: List[ChannelMode], members: Set[String])
+  case class ChannelKey(str: String) extends AnyVal
+  case class UserKey(str: String)    extends AnyVal
+
+  final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
   final case class ChannelMode(mode: String, args: Option[String])
-  final case class User(name: String, channels: Set[String])
+  final case class User(name: String, channels: Set[ChannelKey])
+  implicit def strToChannelKey(str: String): ChannelKey = ChannelKey(str.toLowerCase)
+  implicit def channelKeyToStr(key: ChannelKey): String = key.str
+  implicit def userKeyToStr(key: UserKey): String       = key.str
+  implicit def strToUserKey(str: String): UserKey       = UserKey(str.toLowerCase)
 }

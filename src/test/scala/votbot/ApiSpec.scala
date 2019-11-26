@@ -1,5 +1,5 @@
 package votbot
-import votbot.model.Irc.{Channel, User}
+import votbot.model.Irc.{Channel, ChannelKey, User}
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -37,7 +37,7 @@ object ApiSpec {
         _      <- api.addChannel(Channel(chName, List.empty, Set.empty))
         _      <- api.addChannelToUser(chName, user.name)
         nUser  <- api.getUser(user.name)
-      } yield assert(nUser.channels, equalTo(Set(chName)))
+      } yield assert(nUser.channels, equalTo(Set[ChannelKey](chName)))
     },
     testM("removeChannel removes channel") {
       for {

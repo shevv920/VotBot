@@ -40,6 +40,7 @@ trait Api {
 }
 
 trait LiveApi extends Api {
+
   override def addChannelToUser(chName: String, uName: String): Task[Unit] =
     for {
       ch    <- getChannel(chName)
@@ -70,7 +71,7 @@ trait LiveApi extends Api {
   override def removeUser(user: User): Task[Unit] =
     for {
       _ <- ZIO.foreach(user.channels) { chName =>
-            removeChannelMember(chName, user.name)
+            removeChannelMember(chName.str, user.name)
           }
       _ <- knownUsers.update(u => u - user.name)
     } yield ()
