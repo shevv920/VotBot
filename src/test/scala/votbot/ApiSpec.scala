@@ -1,5 +1,5 @@
 package votbot
-import votbot.model.Irc.{Channel, ChannelKey, User}
+import votbot.model.Irc.{Channel, ChannelKey, User, UserKey}
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -13,7 +13,7 @@ object ApiSpec {
         chName     = "#votbot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
-        channel    <- api.getChannel(chName)
+        channel    <- api.getChannel(ChannelKey(chName))
       } yield assert(channel, equalTo(srcChannel))
     },
     testM("addUser creates user") {
@@ -23,10 +23,10 @@ object ApiSpec {
         uName      = "votBot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
-        ch         <- api.getChannel(chName)
-        srcUser    = User(uName, Set(ch.name))
+        ch         <- api.getChannel(ChannelKey(chName))
+        srcUser    = User(uName, Set(ChannelKey(ch.name)))
         _          <- api.addUser(srcUser)
-        user       <- api.getUser(uName)
+        user       <- api.getUser(UserKey(uName))
       } yield assert(user, equalTo(srcUser))
     },
     testM("addChannelToUser add new channel to user's channel set") {
@@ -35,9 +35,9 @@ object ApiSpec {
         user   <- api.getOrCreateUser("votbot")
         chName = "#votbot"
         _      <- api.addChannel(Channel(chName, List.empty, Set.empty))
-        _      <- api.addChannelToUser(chName, user.name)
-        nUser  <- api.getUser(user.name)
-      } yield assert(nUser.channels, equalTo(Set[ChannelKey](chName)))
+        _      <- api.addChannelToUser(ChannelKey(chName), UserKey(user.name))
+        nUser  <- api.getUser(UserKey(user.name))
+      } yield assert(nUser.channels, equalTo(Set[ChannelKey](ChannelKey(chName))))
     },
     testM("removeChannel removes channel") {
       for {
@@ -45,7 +45,7 @@ object ApiSpec {
         chName     = "#votbot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
-        _          <- api.removeChannel(chName)
+        _          <- api.removeChannel(ChannelKey(chName))
         res        <- api.allChannels()
       } yield assert(res, isEmpty)
     },
@@ -56,12 +56,12 @@ object ApiSpec {
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
         uName      = "votbot"
-        srcUser    = User(uName, Set(chName.toLowerCase))
+        srcUser    = User(uName, Set(ChannelKey(chName)))
         _          <- api.addUser(srcUser)
         _          <- api.removeUser(srcUser)
         mbUser     <- api.findUser(srcUser.name)
         channels   <- api.allChannels()
-      } yield assert(mbUser, isNone) && assert(channels.filter(_.members.contains(uName)), isEmpty)
+      } yield assert(mbUser, isNone) && assert(channels.filter(_.members.contains(UserKey(uName))), isEmpty)
     }
   )
 }

@@ -3,7 +3,7 @@ import votbot.Api
 import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey}
+import votbot.model.Irc._
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -40,7 +40,7 @@ object BaseEventHandlerSpec {
         handler <- ZIO.environment[BaseEventHandler]
         chName  = "#votbot"
         _       <- handler.handle(BotJoin(chName))
-        ch      <- api.getChannel(chName)
+        ch      <- api.getChannel(ChannelKey(chName))
       } yield assert(ch, equalTo(Channel(chName, List(), Set())))
     },
     testM("event Join adds user to channel and channel to user's channels") {
@@ -51,10 +51,10 @@ object BaseEventHandlerSpec {
         chName  = "#votbot"
         _       <- handler.handle(BotJoin(chName))
         _       <- handler.handle(Join(uName, chName))
-        ch      <- api.getChannel(chName)
-        user    <- api.getUser(uName)
-      } yield assert(ch.members, equalTo(Set[UserKey](user.name))) &&
-        assert(user.channels, equalTo(Set[ChannelKey](ch.name)))
+        ch      <- api.getChannel(ChannelKey(chName))
+        user    <- api.getUser(UserKey(uName))
+      } yield assert(ch.members, equalTo(Set(UserKey(user.name)))) &&
+        assert(user.channels, equalTo(Set(ChannelKey(ch.name))))
     },
     testM("Quit removes user from everywhere") {
       for {
@@ -64,12 +64,12 @@ object BaseEventHandlerSpec {
         chName       = "#votbot"
         _            <- handler.handle(BotJoin(chName))
         _            <- handler.handle(Join(uName, chName))
-        ch           <- api.getChannel(chName)
+        ch           <- api.getChannel(ChannelKey(chName))
         user         <- api.findUser(uName)
         _            <- handler.handle(Quit(uName, "Leaving."))
-        cleanChannel <- api.getChannel(chName)
+        cleanChannel <- api.getChannel(ChannelKey(chName))
         mbUser       <- api.findUser(uName)
-      } yield assert(ch.members, equalTo(Set[UserKey](uName))) &&
+      } yield assert(ch.members, equalTo(Set(UserKey(uName)))) &&
         assert(user.nonEmpty, isTrue) &&
         assert(cleanChannel.members, isEmpty) &&
         assert(mbUser, isNone)
@@ -83,8 +83,8 @@ object BaseEventHandlerSpec {
         _       <- handler.handle(BotJoin(chName))
         _       <- handler.handle(Join(uName, chName))
         _       <- handler.handle(Part(uName, chName, "reason"))
-        ch      <- api.getChannel(chName)
-        u       <- api.getUser(uName)
+        ch      <- api.getChannel(ChannelKey(chName))
+        u       <- api.getUser(UserKey(uName))
       } yield assert(ch.members, isEmpty) && assert(u.channels, isEmpty)
     },
     testM("NamesList add list of users to channel members") {
@@ -94,13 +94,14 @@ object BaseEventHandlerSpec {
         chName  = "#votbot"
         _       <- handler.handle(BotJoin(chName))
         names = List(
-          ("nick1", List.empty[ChannelMode]),
-          ("nick2", List.empty[ChannelMode]),
-          ("nick3", List.empty[ChannelMode])
+          ("nicK1", List.empty[ChannelMode]),
+          ("Nick2", List.empty[ChannelMode]),
+          ("niCk3", List.empty[ChannelMode])
         )
-        _ <- handler.handle(NamesList(chName, names))
-        channel <- api.getChannel(chName)
-      } yield assert(channel.members.size, equalTo(3))
+        _       <- handler.handle(NamesList(chName, names))
+        channel <- api.getChannel(ChannelKey(chName))
+        nick1   <- api.getUser(UserKey("nick1"))
+      } yield assert(channel.members.size, equalTo(3)) && assert(nick1.name, equalTo("nicK1"))
     }
   )
 }

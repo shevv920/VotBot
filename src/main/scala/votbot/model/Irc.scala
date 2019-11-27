@@ -183,15 +183,24 @@ object Irc {
   }
 
   case class ChannelKey(str: String) extends AnyVal
-  case class UserKey(str: String)    extends AnyVal
+
+  object ChannelKey {
+    def apply(str: String): ChannelKey = new ChannelKey(str.toLowerCase)
+  }
+
+  case class UserKey(str: String) extends AnyVal
+
+  object UserKey {
+    def apply(str: String): UserKey = new UserKey(str.toLowerCase)
+  }
 
   final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
   final case class ChannelMode(mode: String, args: Option[String])
   final case class User(name: String, channels: Set[ChannelKey])
-  implicit def strToChannelKey(str: String): ChannelKey   = ChannelKey(str.toLowerCase)
-  implicit def channelKeyToStr(key: ChannelKey): String   = key.str
-  implicit def userKeyToStr(key: UserKey): String         = key.str
-  implicit def strToUserKey(str: String): UserKey         = UserKey(str.toLowerCase)
-  implicit def userToKey(user: User): UserKey             = UserKey(user.name.toLowerCase)
-  implicit def channelToKey(channel: Channel): ChannelKey = ChannelKey(channel.name.toLowerCase)
+//  implicit def strToChannelKey(str: String): ChannelKey   = ChannelKey(str.toLowerCase)
+//  implicit def channelKeyToStr(key: ChannelKey): String   = key.str
+//  implicit def userKeyToStr(key: UserKey): String         = key.str
+//  implicit def strToUserKey(str: String): UserKey         = UserKey(str.toLowerCase)
+//  implicit def userToKey(user: User): UserKey             = UserKey(user.name.toLowerCase)
+//  implicit def channelToKey(channel: Channel): ChannelKey = ChannelKey(channel.name.toLowerCase)
 }

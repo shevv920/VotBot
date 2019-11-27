@@ -2,7 +2,7 @@ package votbot.event.handlers
 import votbot.event.Event._
 import votbot.event.EventHandler
 import votbot.model.Irc.Numeric.{ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST}
-import votbot.model.Irc.{Channel, Command, RawMessage}
+import votbot.model.Irc._
 import votbot.{Api, BotState, Configuration}
 import zio.random.Random
 import zio.{Ref, ZIO}
@@ -50,16 +50,16 @@ trait BaseEventHandler extends EventHandler {
             case BotJoin(chName) =>
               api.addChannel(Channel(chName, List.empty, Set.empty))
             case BotPart(channel) =>
-              api.removeChannel(channel)
+              api.removeChannel(ChannelKey(channel))
             case Join(name, channel) =>
               for {
-                user <- api.getOrCreateUser(name)
-                ch   <- api.getChannel(channel)
-                _    <- api.addChannelMember(ch, user)
-                _    <- api.addChannelToUser(ch, user)
+                user  <- api.getOrCreateUser(name)
+                chKey = ChannelKey(channel)
+                _     <- api.addChannelMember(chKey, user)
+                _     <- api.addChannelToUser(chKey, UserKey(user.name))
               } yield ()
             case Part(user, channel, reason) =>
-              api.removeChannelMember(channel, user)
+              api.removeChannelMember(ChannelKey(channel), UserKey(user))
             case NamesList(chName, members) =>
               for {
                 channelMembers <- ZIO.foreach(members) { tuple =>
@@ -68,13 +68,13 @@ trait BaseEventHandler extends EventHandler {
                                      modes = tuple._2
                                    } yield user
                                  }
-                _ <- ZIO.foreach(channelMembers)(api.addChannelMember(chName, _))
+                _ <- ZIO.foreach(channelMembers)(api.addChannelMember(ChannelKey(chName), _))
               } yield ()
             case Numeric(RPL_ENDOFNAMES, args, prefix) =>
               ZIO.unit
-            case Quit(user, reason) =>
+            case Quit(userName, reason) =>
               for {
-                user <- api.getUser(user)
+                user <- api.getUser(UserKey(userName))
                 _    <- api.removeUser(user)
               } yield ()
           }
