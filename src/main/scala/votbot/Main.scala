@@ -44,16 +44,18 @@ object Main extends App {
           chs      <- Ref.make(Map.empty[ChannelKey, Channel])
           handlers <- Ref.make(List[EventHandler](Quotes, Help))
           users    <- Ref.make(Map.empty[UserKey, User])
-        } yield new VotbotEnv with BasicEnv with LiveApi with BaseEventHandler with Blocking.Live {
-          override val knownUsers: Ref[Map[UserKey, User]]          = users
-          override val customHandlers: Ref[List[EventHandler]]      = handlers
-          override val config: Config                               = cfg
-          override val state: Ref[State]                            = st
-          override val parseQ: Queue[String]                        = inQ
-          override val processQ: Queue[RawMessage]                  = pQ
-          override val outMessageQ: Queue[RawMessage]               = outQ
-          override val eventQ: Queue[Event]                         = evtQ
-          override val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
+        } yield new VotbotEnv with BasicEnv with Api with BaseEventHandler with Blocking.Live {
+          override val customHandlers: Ref[List[EventHandler]] = handlers
+          override val config: Config                          = cfg
+          override val state: Ref[State]                       = st
+          override val api: Api.Service[Any] = new DefaultApi[Any] {
+            override protected val parseQ: Queue[String]                        = inQ
+            override protected val processQ: Queue[RawMessage]                  = pQ
+            override protected val outMessageQ: Queue[RawMessage]               = outQ
+            override protected val eventQ: Queue[Event]                         = evtQ
+            override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
+            override protected val knownUsers: Ref[Map[UserKey, User]]          = users
+          }
         }
       )
       .either
@@ -72,7 +74,7 @@ object Main extends App {
       _ <- AsynchronousSocketChannel().use { channel =>
             for {
               _            <- channel.connect(addr)
-              _            <- ZIO.accessM[Api](_.enqueueEvent(Connected))
+              _            <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
               reader       <- reader(channel).fork
               writer       <- writer(channel).fork
               parser       <- MsgParser.parser().forever.fork
@@ -94,7 +96,7 @@ object Main extends App {
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _            <- ZIO.accessM[Api](_.enqueueParse(valid: _*))
+      _            <- ZIO.accessM[Api](_.api.enqueueParse(valid: _*))
       _            <- reader(channel, rem.mkString(""))
     } yield ()
 
@@ -103,7 +105,7 @@ object Main extends App {
 
   def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      msg      <- ZIO.accessM[Api](_.dequeueOutMessage())
+      msg      <- ZIO.accessM[Api](_.api.dequeueOutMessage())
       msgBytes <- MsgParser.msgToByteArray(msg)
       chunk    = Chunk.fromArray(msgBytes)
       remN     <- channel.write(rem ++ chunk)
@@ -114,7 +116,7 @@ object Main extends App {
 
   def processor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      api <- ZIO.environment[Api]
+      api <- ZIO.access[Api](_.api)
       msg <- api.dequeueProcess()
       _   <- putStrLn("Processing IRC Message: " + msg.toString)
       evt <- Event.ircToEvent(msg)

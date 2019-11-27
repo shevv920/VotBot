@@ -23,16 +23,18 @@ object Base {
     users    <- Ref.make(Map.empty[UserKey, User])
     handlers <- Ref.make(List.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
-  } yield new LiveApi with Console.Live with TestConfiguration with BotState with BaseEventHandler with Random.Live
+  } yield new Api with Console.Live with TestConfiguration with BotState with BaseEventHandler with Random.Live
   with Blocking.Live {
-    override val parseQ: Queue[String]                            = inQ
-    override val processQ: Queue[RawMessage]                      = pQ
-    override val outMessageQ: Queue[RawMessage]                   = outQ
-    override val eventQ: Queue[Event.Event]                       = evtQ
-    override val knownChannels: Ref[Map[ChannelKey, Irc.Channel]] = chs
-    override val knownUsers: Ref[Map[UserKey, Irc.User]]          = users
-    override val customHandlers: Ref[List[EventHandler]]          = handlers
-    override val state: Ref[State]                                = st
+    override val api = new DefaultApi[Any] {
+      override val parseQ: Queue[String]                            = inQ
+      override val processQ: Queue[RawMessage]                      = pQ
+      override val outMessageQ: Queue[RawMessage]                   = outQ
+      override val eventQ: Queue[Event.Event]                       = evtQ
+      override val knownChannels: Ref[Map[ChannelKey, Irc.Channel]] = chs
+      override val knownUsers: Ref[Map[UserKey, Irc.User]]          = users
+    }
+    override val customHandlers: Ref[List[EventHandler]] = handlers
+    override val state: Ref[State]                       = st
   }
 
   val envM = env.toManaged_

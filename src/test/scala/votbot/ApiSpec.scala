@@ -9,7 +9,7 @@ object ApiSpec {
   val tests = suite("Api spec")(
     testM("addChannel creates channel") {
       for {
-        api        <- ZIO.environment[Api]
+        api        <- ZIO.access[Api](_.api)
         chName     = "#votbot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
@@ -18,7 +18,7 @@ object ApiSpec {
     },
     testM("addUser creates user") {
       for {
-        api        <- ZIO.environment[Api]
+        api        <- ZIO.access[Api](_.api)
         chName     = "#votbot"
         uName      = "votBot"
         srcChannel = Channel(chName, List.empty, Set.empty)
@@ -31,7 +31,7 @@ object ApiSpec {
     },
     testM("addChannelToUser add new channel to user's channel set") {
       for {
-        api    <- ZIO.environment[Api]
+        api    <- ZIO.access[Api](_.api)
         user   <- api.getOrCreateUser("votbot")
         chName = "#votbot"
         _      <- api.addChannel(Channel(chName, List.empty, Set.empty))
@@ -41,7 +41,7 @@ object ApiSpec {
     },
     testM("removeChannel removes channel") {
       for {
-        api        <- ZIO.environment[Api]
+        api        <- ZIO.access[Api](_.api)
         chName     = "#votbot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)
@@ -51,7 +51,7 @@ object ApiSpec {
     },
     testM("removeUser removes user from knownUsers and all channels") {
       for {
-        api        <- ZIO.environment[Api]
+        api        <- ZIO.access[Api](_.api)
         chName     = "#votbot"
         srcChannel = Channel(chName, List.empty, Set.empty)
         _          <- api.addChannel(srcChannel)

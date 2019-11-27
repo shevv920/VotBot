@@ -7,7 +7,7 @@ object Help extends CommandHandler {
   override val description: String    = "Все команды которые умеет бот: "
   override def response(channel: String, cmd: String, arg: String): ZIO[HandlerEnv, Throwable, Unit] =
     for {
-      api              <- ZIO.environment[Api]
+      api              <- ZIO.access[Api](_.api)
       baseEventHandler <- ZIO.environment[BaseEventHandler]
       customHandlers   <- baseEventHandler.customHandlers.get
       commandHandlers <- ZIO.effect(

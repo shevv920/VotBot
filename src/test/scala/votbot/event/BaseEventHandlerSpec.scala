@@ -13,7 +13,7 @@ object BaseEventHandlerSpec {
   val tests = suite("BaseEventHandler")(
     testM("response for ping request with/with no args ") {
       for {
-        api         <- ZIO.environment[Api]
+        api         <- ZIO.access[Api](_.api)
         handler     <- ZIO.environment[BaseEventHandler]
         evt         = Ping(None)
         args        = "irc.foo.net"
@@ -27,7 +27,7 @@ object BaseEventHandlerSpec {
     },
     testM("send nick and user commands on Connected Event") {
       for {
-        api     <- ZIO.environment[Api]
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
         _       <- handler.handle(Connected)
         nickCmd <- api.dequeueOutMessage()
@@ -36,7 +36,7 @@ object BaseEventHandlerSpec {
     },
     testM("BotJoin creates channel") {
       for {
-        api     <- ZIO.environment[Api]
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
         chName  = "#votbot"
         _       <- handler.handle(BotJoin(chName))
@@ -45,7 +45,7 @@ object BaseEventHandlerSpec {
     },
     testM("event Join adds user to channel and channel to user's channels") {
       for {
-        api     <- ZIO.environment[Api]
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
         uName   = "testName"
         chName  = "#votbot"
@@ -58,7 +58,7 @@ object BaseEventHandlerSpec {
     },
     testM("Quit removes user from everywhere") {
       for {
-        api          <- ZIO.environment[Api]
+        api          <- ZIO.access[Api](_.api)
         handler      <- ZIO.environment[BaseEventHandler]
         uName        = "testName"
         chName       = "#votbot"
@@ -76,7 +76,7 @@ object BaseEventHandlerSpec {
     },
     testM("Part removes user from channel and channel from user") {
       for {
-        api     <- ZIO.environment[Api]
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
         uName   = "testName"
         chName  = "#votbot"
@@ -89,7 +89,7 @@ object BaseEventHandlerSpec {
     },
     testM("NamesList add list of users to channel members") {
       for {
-        api     <- ZIO.environment[Api]
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
         chName  = "#votbot"
         _       <- handler.handle(BotJoin(chName))

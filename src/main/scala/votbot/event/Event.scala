@@ -93,7 +93,7 @@ object Event {
 
   def eventProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      api     <- ZIO.environment[Api]
+      api     <- ZIO.access[Api](_.api)
       evt     <- api.dequeueEvent()
       handler <- ZIO.environment[BaseEventHandler]
       _       <- putStrLn("Processing Event: " + evt.toString)

@@ -6,41 +6,49 @@ import votbot.model.Irc.{Channel, ChannelKey, User, UserKey}
 import zio._
 
 trait Api {
-  protected val parseQ: Queue[String]
-  protected val processQ: Queue[Irc.RawMessage]
-  protected val outMessageQ: Queue[Irc.RawMessage]
-  protected val eventQ: Queue[Event]
-  protected val knownChannels: Ref[Map[ChannelKey, Channel]]
-  protected val knownUsers: Ref[Map[UserKey, User]]
-
-  def enqueueEvent(evt: Event*): UIO[Unit]
-  def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit]
-  def enqueueParse(raw: String*): UIO[Unit]
-  def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit]
-  def dequeueEvent(): UIO[Event]
-  def dequeueParse(): UIO[String]
-  def dequeueOutMessage(): UIO[Irc.RawMessage]
-  def dequeueProcess(): UIO[Irc.RawMessage]
-  def sendChannelMessage(channel: String, msg: String): UIO[Unit]
-  def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
-  def allChannels(): Task[List[Channel]]
-  def addChannel(channel: Channel): UIO[Unit]
-  def removeChannel(chName: ChannelKey): UIO[Unit]
-  def addChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
-  def addChannelMember(chName: ChannelKey, member: User): Task[Unit]
-  def removeChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
-  def getChannel(chName: ChannelKey): Task[Channel]
-  def addUser(user: User): Task[Unit]
-  def removeUser(userName: UserKey): Task[Unit]
-  def removeUser(user: User): Task[Unit]
-  def getOrCreateUser(name: String): Task[User]
-  def findUser(name: String): Task[Option[User]]
-  def getUser(name: String): Task[User]
-  def addChannelToUser(chName: ChannelKey, uName: UserKey): Task[Unit]
-  def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit]
+  val api: Api.Service[Any]
 }
 
-trait LiveApi extends Api {
+object Api {
+
+  trait Service[R] {
+    protected val parseQ: Queue[String]
+    protected val processQ: Queue[Irc.RawMessage]
+    protected val outMessageQ: Queue[Irc.RawMessage]
+    protected val eventQ: Queue[Event]
+    protected val knownChannels: Ref[Map[ChannelKey, Channel]]
+    protected val knownUsers: Ref[Map[UserKey, User]]
+
+    def enqueueEvent(evt: Event*): UIO[Unit]
+    def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit]
+    def enqueueParse(raw: String*): UIO[Unit]
+    def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit]
+    def dequeueEvent(): UIO[Event]
+    def dequeueParse(): UIO[String]
+    def dequeueOutMessage(): UIO[Irc.RawMessage]
+    def dequeueProcess(): UIO[Irc.RawMessage]
+    def sendChannelMessage(channel: String, msg: String): UIO[Unit]
+    def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
+    def allChannels(): Task[List[Channel]]
+    def addChannel(channel: Channel): UIO[Unit]
+    def removeChannel(chName: ChannelKey): UIO[Unit]
+    def addChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
+    def addChannelMember(chName: ChannelKey, member: User): Task[Unit]
+    def removeChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit]
+    def getChannel(chName: ChannelKey): Task[Channel]
+    def addUser(user: User): Task[Unit]
+    def removeUser(userName: UserKey): Task[Unit]
+    def removeUser(user: User): Task[Unit]
+    def getOrCreateUser(name: String): Task[User]
+    def findUser(name: String): Task[Option[User]]
+    def getUser(name: String): Task[User]
+    def addChannelToUser(chName: ChannelKey, uName: UserKey): Task[Unit]
+    def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit]
+  }
+}
+
+trait DefaultApi[R] extends Api.Service[R] {
+
   override def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit] =
     for {
       user <- getUser(uName)
@@ -135,4 +143,5 @@ trait LiveApi extends Api {
     outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, channel, msg)).unit
   override def sendPrivateMessage(nick: String, msg: String): UIO[Unit] =
     outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, nick, msg)).unit
+
 }

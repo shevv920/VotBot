@@ -23,7 +23,7 @@ trait BaseEventHandler extends EventHandler {
   override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       cfg   <- ZIO.environment[Configuration].map(_.config)
-      api   <- ZIO.environment[Api]
+      api   <- ZIO.access[Api](_.api)
       state <- ZIO.access[BotState](_.state)
       _ <- ZIO.whenCase(event) {
             case Ping(Some(args)) =>
