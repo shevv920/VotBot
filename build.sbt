@@ -2,7 +2,7 @@ enablePlugins(PackPlugin)
 
 name := "VotBot"
 version := "0.1"
-scalaVersion := "2.12.10"
+scalaVersion := "2.13.1"
 lazy val zioVersion = "1.0.0-RC17"
 packResourceDir += (baseDirectory.value / "src" / "main" / "resources" -> "")
 mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".conf")) }

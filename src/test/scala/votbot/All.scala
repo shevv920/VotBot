@@ -5,7 +5,7 @@ import votbot.event.handlers.BaseEventHandler
 import votbot.event.{BaseEventHandlerSpec, Event, EventHandler}
 import votbot.model.Bot.State
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, ChannelKey, RawMessage, User, UserKey}
+import votbot.model.Irc._
 import zio.blocking.Blocking
 import zio.console._
 import zio.random.Random
@@ -24,7 +24,7 @@ object Base {
     handlers <- Ref.make(List.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
   } yield new Api with Console.Live with TestConfiguration with BotState with BaseEventHandler with Random.Live
-  with Blocking.Live {
+  with Blocking.Live with TestDatabase {
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                            = inQ
       override val processQ: Queue[RawMessage]                      = pQ
@@ -46,6 +46,7 @@ object All
       suite("all")(
         MsgParserSpec.tests,
         ApiSpec.tests,
-        BaseEventHandlerSpec.tests
+        BaseEventHandlerSpec.tests,
+        DatabaseSpec.tests
       ).provideManaged(Base.envM)
     )
