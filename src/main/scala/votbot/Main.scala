@@ -8,7 +8,7 @@ import votbot.event.Event._
 import votbot.event.handlers.{BaseEventHandler, Help, Quotes}
 import votbot.event.{Event, EventHandler}
 import votbot.model.Bot.State
-import votbot.model.Irc.{Channel, ChannelKey, RawMessage, User, UserKey}
+import votbot.model.Irc._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -110,7 +110,7 @@ object Main extends App {
       chunk    = Chunk.fromArray(msgBytes)
       remN     <- channel.write(rem ++ chunk)
       rem      = chunk.drop(remN)
-      _        <- putStrLn("written: " + msg + " remaining: " + rem.length)
+      _        <- putStrLn("Written: " + new String(msgBytes, StandardCharsets.UTF_8) + " remaining: " + rem.length)
       _        <- writer(channel, rem)
     } yield ()
 

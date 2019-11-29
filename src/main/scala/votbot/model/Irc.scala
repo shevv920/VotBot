@@ -1,6 +1,6 @@
 package votbot.model
 
-import enumeratum.EnumEntry.Uppercase
+import enumeratum.EnumEntry.UpperWords
 import enumeratum.{Enum, EnumEntry}
 
 import scala.language.implicitConversions
@@ -161,7 +161,7 @@ object Irc {
 
   final case class Prefix(nick: String, username: String, host: String)
 
-  sealed trait Command extends EnumEntry with Uppercase
+  sealed trait Command extends EnumEntry with UpperWords
 
   object Command extends Enum[Command] {
     val values = findValues
@@ -177,6 +177,8 @@ object Irc {
     final case object Privmsg extends Command
     final case object Kick    extends Command
     final case object Quit    extends Command
+    final case object CapReq  extends Command
+    final case object CapEnd  extends Command
 
     final case class Unknown(raw: String) extends Command
     final case class Numeric(cmd: String) extends Command
@@ -197,10 +199,4 @@ object Irc {
   final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
   final case class ChannelMode(mode: String, args: Option[String])
   final case class User(name: String, channels: Set[ChannelKey])
-//  implicit def strToChannelKey(str: String): ChannelKey   = ChannelKey(str.toLowerCase)
-//  implicit def channelKeyToStr(key: ChannelKey): String   = key.str
-//  implicit def userKeyToStr(key: UserKey): String         = key.str
-//  implicit def strToUserKey(str: String): UserKey         = UserKey(str.toLowerCase)
-//  implicit def userToKey(user: User): UserKey             = UserKey(user.name.toLowerCase)
-//  implicit def channelToKey(channel: Channel): ChannelKey = ChannelKey(channel.name.toLowerCase)
 }

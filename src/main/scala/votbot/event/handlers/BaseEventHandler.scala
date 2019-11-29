@@ -44,8 +44,12 @@ trait BaseEventHandler extends EventHandler {
               val userCmd = Irc.RawMessage(Irc.Command.User, cfg.bot.userName, "*", "*", cfg.bot.realName)
               api.enqueueOutMessage(nickCmd, userCmd)
             case Welcome(nick, host) =>
+              val capReqCmd =
+                Irc.RawMessage(Irc.Command.CapReq, ":" + cfg.server.capRequire.getOrElse(List.empty).mkString(" "))
+              val capEndCmd = Irc.RawMessage(Irc.Command.CapEnd, "")
+              val joinCmd   = Irc.RawMessage(Irc.Command.Join, cfg.bot.autoJoinChannels.mkString(","))
               api
-                .enqueueOutMessage(Irc.RawMessage(Irc.Command.Join, cfg.bot.autoJoinChannels.mkString(",")))
+                .enqueueOutMessage(capReqCmd, capEndCmd, joinCmd)
                 .flatMap(_ => state.update(_.copy(nick = nick)))
             case BotJoin(chName) =>
               api.addChannel(Irc.Channel(chName, List.empty, Set.empty))
