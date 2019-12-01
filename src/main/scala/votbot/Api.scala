@@ -25,7 +25,11 @@ object Api {
     def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit]
     def dequeueEvent(): UIO[Event]
     def dequeueParse(): UIO[String]
+
     def dequeueOutMessage(): UIO[Irc.RawMessage]
+
+    def dequeueAllOutMessages(): UIO[List[Irc.RawMessage]]
+
     def dequeueProcess(): UIO[Irc.RawMessage]
     def sendChannelMessage(channel: String, msg: String): UIO[Unit]
     def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
@@ -129,18 +133,28 @@ trait DefaultApi[R] extends Api.Service[R] {
     processQ.offerAll(msg).unit
   override def enqueueParse(raw: String*): UIO[Unit] =
     parseQ.offerAll(raw).unit
+
   override def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit] =
     outMessageQ.offerAll(msg).unit
+
   override def dequeueEvent(): UIO[Event] =
     eventQ.take
+
   override def dequeueParse(): UIO[String] =
     parseQ.take
+
   override def dequeueProcess(): UIO[Irc.RawMessage] =
     processQ.take
+
   override def dequeueOutMessage(): UIO[Irc.RawMessage] =
     outMessageQ.take
+
+  override def dequeueAllOutMessages(): UIO[List[Irc.RawMessage]] =
+    outMessageQ.takeAll
+
   override def sendChannelMessage(channel: String, msg: String): UIO[Unit] =
     outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, channel, msg)).unit
+
   override def sendPrivateMessage(nick: String, msg: String): UIO[Unit] =
     outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, nick, msg)).unit
 
