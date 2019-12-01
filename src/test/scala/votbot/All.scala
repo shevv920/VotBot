@@ -23,8 +23,15 @@ object Base {
     users    <- Ref.make(Map.empty[UserKey, User])
     handlers <- Ref.make(List.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
-  } yield new Api with Console.Live with TestConfiguration with BotState with BaseEventHandler with Random.Live
-  with Blocking.Live with TestDatabase {
+  } yield new Api
+    with Console.Live
+    with TestConfiguration
+    with BotState
+    with BaseEventHandler
+    with Random.Live
+    with Blocking.Live
+    with TestDatabase {
+
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                            = inQ
       override val processQ: Queue[RawMessage]                      = pQ

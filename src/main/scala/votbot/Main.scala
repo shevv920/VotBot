@@ -47,6 +47,7 @@ object Main extends App {
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
           override val state: Ref[State]                       = st
+
           override val api: Api.Service[Any] = new DefaultApi[Any] {
             override protected val parseQ: Queue[String]                        = inQ
             override protected val processQ: Queue[RawMessage]                  = pQ

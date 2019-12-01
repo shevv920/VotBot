@@ -2,7 +2,7 @@ package votbot.event
 
 import votbot.event.Event.Event
 import votbot.event.handlers.BaseEventHandler
-import votbot.{Api, BotState, Configuration}
+import votbot.{ Api, BotState, Configuration }
 import zio.ZIO
 import zio.blocking.Blocking
 import zio.random.Random

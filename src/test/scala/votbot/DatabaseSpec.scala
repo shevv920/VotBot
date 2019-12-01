@@ -1,4 +1,5 @@
 package votbot
+
 import votbot.model.DB.Quote
 import zio.ZIO
 import zio.test.Assertion._

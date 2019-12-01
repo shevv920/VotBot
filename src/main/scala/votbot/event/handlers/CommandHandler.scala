@@ -1,6 +1,6 @@
 package votbot.event.handlers
 import votbot.BotState
-import votbot.event.Event.{ChannelMessage, Event}
+import votbot.event.Event.{ ChannelMessage, Event }
 import votbot.event.EventHandler
 import zio.ZIO
 

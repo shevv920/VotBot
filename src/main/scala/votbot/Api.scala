@@ -59,6 +59,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       chs  = user.channels.filterNot(_ == chName)
       _    <- knownUsers.update(us => us + (uName -> user.copy(channels = chs)))
     } yield ()
+
   override def addChannelToUser(chKey: ChannelKey, uName: UserKey): Task[Unit] =
     for {
       ch    <- getChannel(chKey)
@@ -66,6 +67,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       nUser = user.copy(channels = user.channels + ChannelKey(ch.name))
       _     <- knownUsers.update(us => us + (uName -> nUser))
     } yield ()
+
   override def getUser(uKey: UserKey): Task[User] =
     for {
       users <- knownUsers.get
@@ -73,19 +75,23 @@ trait DefaultApi[R] extends Api.Service[R] {
                .fromOption(users.get(uKey))
                .mapError(_ => new Exception("User does not exists " + uKey))
     } yield user
+
   override def findUser(name: String): Task[Option[User]] =
     for {
       users <- knownUsers.get
       user  = users.get(UserKey(name))
     } yield user
+
   override def getOrCreateUser(name: String): Task[User] =
     for {
       users <- knownUsers.get
       user  <- ZIO.effect(users.getOrElse(UserKey(name), User(name, Set.empty)))
       _     <- addUser(user)
     } yield user
+
   override def addUser(user: User): Task[Unit] =
     knownUsers.update(m => m + (UserKey(user.name) -> user)).unit
+
   override def removeUser(user: User): Task[Unit] =
     for {
       _ <- ZIO.foreach(user.channels) { chName =>
@@ -93,18 +99,19 @@ trait DefaultApi[R] extends Api.Service[R] {
           }
       _ <- knownUsers.update(u => u - UserKey(user.name))
     } yield ()
+
   override def removeUser(userName: UserKey): Task[Unit] =
     getUser(userName)
       .map(user => removeUser(user))
+
   override def removeChannelMember(chName: ChannelKey, memberName: UserKey): Task[Unit] =
     for {
       channel <- getChannel(chName)
       user    <- getUser(memberName)
-      _ <- knownChannels.update(
-            m => m + (chName -> channel.copy(members = channel.members - UserKey(user.name)))
-          )
-      _ <- removeChannelFromUser(chName, memberName)
+      _       <- knownChannels.update(m => m + (chName -> channel.copy(members = channel.members - UserKey(user.name))))
+      _       <- removeChannelFromUser(chName, memberName)
     } yield ()
+
   override def addChannelMember(chKey: ChannelKey, uKey: UserKey): Task[Unit] =
     for {
       channel <- getChannel(chKey)
@@ -112,8 +119,10 @@ trait DefaultApi[R] extends Api.Service[R] {
       nCh     = channel.copy(members = channel.members + UserKey(user.name))
       _       <- knownChannels.update(m => m + (chKey -> nCh))
     } yield ()
+
   override def addChannelMember(chKey: ChannelKey, member: User): Task[Unit] =
     addChannelMember(chKey, UserKey(member.name))
+
   override def getChannel(chName: ChannelKey): Task[Channel] =
     for {
       channels <- knownChannels.get
@@ -121,16 +130,22 @@ trait DefaultApi[R] extends Api.Service[R] {
                   .fromOption(channels.get(chName))
                   .mapError(_ => new Exception("Channel does not exist: " + chName))
     } yield channel
+
   override def removeChannel(channelName: ChannelKey): UIO[Unit] =
     knownChannels.update(_ - channelName).unit
+
   override def addChannel(channel: Channel): UIO[Unit] =
     knownChannels.update(_ + (ChannelKey(channel.name) -> channel)).unit
+
   override def allChannels(): Task[List[Channel]] =
     knownChannels.get.map(_.values.toList)
+
   override def enqueueEvent(evt: Event*): UIO[Unit] =
     eventQ.offerAll(evt).unit
+
   override def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit] =
     processQ.offerAll(msg).unit
+
   override def enqueueParse(raw: String*): UIO[Unit] =
     parseQ.offerAll(raw).unit
 

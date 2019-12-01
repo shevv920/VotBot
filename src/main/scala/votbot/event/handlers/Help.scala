@@ -5,6 +5,7 @@ import zio.ZIO
 object Help extends CommandHandler {
   override val commands: List[String] = List("help", "h")
   override val description: String    = "Все команды которые умеет бот: "
+
   override def response(channel: String, cmd: String, arg: String): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api              <- ZIO.access[Api](_.api)

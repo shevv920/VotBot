@@ -1,4 +1,5 @@
 package votbot
+
 import io.getquill.{ Literal, SqliteJdbcContext }
 import votbot.model.DB.Quote
 import zio.{ Task, ZIO }
@@ -27,10 +28,13 @@ trait TestDatabase extends Database {
 
     override def cleanQuotes(): Task[Unit] =
       ZIO.effect { ctx.run(quote(query[Quote].delete)) }
+
     override def findQuotes(key: String): Task[List[Quote]] =
       ZIO.effect { ctx.run(quote(query[Quote].filter(_.key == lift(key)))) }
+
     override def addQuote(q: Quote): Task[Unit] =
       ZIO.effect { ctx.run(quote(query[Quote].insert(lift(q)))) }
+
     override def addQuotes(qs: List[Quote]): Task[Unit] =
       ZIO
         .foreach(qs)(q => ZIO.effect(ctx.run(quote(query[Quote].insert(lift(q))))))

@@ -1,7 +1,7 @@
 package votbot.event.handlers
 import votbot.Api
 import zio.ZIO
-import zio.nio.file.{Files, Path}
+import zio.nio.file.{ Files, Path }
 import zio.random.Random
 
 object Quotes extends CommandHandler {
