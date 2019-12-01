@@ -1,7 +1,7 @@
 package votbot.model
 
 import enumeratum.EnumEntry.UpperWords
-import enumeratum.{Enum, EnumEntry}
+import enumeratum.{ Enum, EnumEntry }
 
 import scala.language.implicitConversions
 
@@ -177,8 +177,10 @@ object Irc {
     final case object Privmsg extends Command
     final case object Kick    extends Command
     final case object Quit    extends Command
+    final case object CapLs   extends Command
     final case object CapReq  extends Command
     final case object CapEnd  extends Command
+    final case object Cap     extends Command
 
     final case class Unknown(raw: String) extends Command
     final case class Numeric(cmd: String) extends Command

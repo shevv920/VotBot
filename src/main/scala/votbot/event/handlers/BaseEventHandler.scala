@@ -2,10 +2,10 @@ package votbot.event.handlers
 import votbot.event.Event._
 import votbot.event.EventHandler
 import votbot.model.Irc
-import votbot.model.Irc.Numeric.{ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST}
-import votbot.{Api, BotState, Configuration}
+import votbot.model.Irc.Numeric.{ ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST }
+import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
-import zio.{Ref, ZIO}
+import zio.{ Ref, ZIO }
 
 trait BaseEventHandler extends EventHandler {
   val customHandlers: Ref[List[EventHandler]]
@@ -40,16 +40,20 @@ trait BaseEventHandler extends EventHandler {
                 _       <- state.update(s => s.copy(nick = newNick))
               } yield ()
             case Connected =>
-              val nickCmd = Irc.RawMessage(Irc.Command.Nick, cfg.bot.nick)
-              val userCmd = Irc.RawMessage(Irc.Command.User, cfg.bot.userName, "*", "*", cfg.bot.realName)
-              api.enqueueOutMessage(nickCmd, userCmd)
-            case Welcome(nick, host) =>
+              val capLsCmd = Irc.RawMessage(Irc.Command.CapLs)
+              val nickCmd  = Irc.RawMessage(Irc.Command.Nick, cfg.bot.nick)
+              val userCmd  = Irc.RawMessage(Irc.Command.User, cfg.bot.userName, "*", "*", cfg.bot.realName)
+              api.enqueueOutMessage(capLsCmd, nickCmd, userCmd)
+            case CapabilityListReceived(caps) =>
               val capReqCmd =
                 Irc.RawMessage(Irc.Command.CapReq, ":" + cfg.server.capRequire.getOrElse(List.empty).mkString(" "))
+              val capEnd = Irc.RawMessage(Irc.Command.CapEnd)
+              api.enqueueOutMessage(capReqCmd, capEnd)
+            case Welcome(nick, host) =>
               val capEndCmd = Irc.RawMessage(Irc.Command.CapEnd, "")
               val joinCmd   = Irc.RawMessage(Irc.Command.Join, cfg.bot.autoJoinChannels.mkString(","))
               api
-                .enqueueOutMessage(capReqCmd, capEndCmd, joinCmd)
+                .enqueueOutMessage(capEndCmd, joinCmd)
                 .flatMap(_ => state.update(_.copy(nick = nick)))
             case BotJoin(chName) =>
               api.addChannel(Irc.Channel(chName, List.empty, Set.empty))

@@ -2,7 +2,7 @@ package votbot
 
 import votbot.event.Event.Event
 import votbot.model.Irc
-import votbot.model.Irc.{Channel, ChannelKey, User, UserKey}
+import votbot.model.Irc.{ Channel, ChannelKey, User, UserKey }
 import zio._
 
 trait Api {

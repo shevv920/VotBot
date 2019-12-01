@@ -5,14 +5,14 @@ import java.nio.file.Paths
 
 import pureconfig.generic.auto._
 import votbot.event.Event._
-import votbot.event.handlers.{BaseEventHandler, Help, Quotes}
-import votbot.event.{Event, EventHandler}
+import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
+import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.Irc._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.console.{Console, _}
+import zio.console.{ Console, _ }
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
@@ -35,7 +35,7 @@ object Main extends App {
     mainLogic
       .provideSomeM(
         for {
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("../application.conf")))
+          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("../application.conf"))) //fixme - paths
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]

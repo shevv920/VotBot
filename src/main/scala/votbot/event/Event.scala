@@ -3,8 +3,8 @@ package votbot.event
 import votbot.Main.VotbotEnv
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.Irc
-import votbot.model.Irc.{ChannelMode, Command, Prefix, RawMessage}
-import votbot.{Api, BotState}
+import votbot.model.Irc.{ ChannelMode, Command, Prefix, RawMessage }
+import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
 
@@ -28,6 +28,7 @@ object Event {
   final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
   final case class Quit(user: String, reason: String)                                       extends Event
   final case class NamesList(channel: String, members: List[(String, List[ChannelMode])])   extends Event
+  final case class CapabilityListReceived(caps: List[String])                               extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
