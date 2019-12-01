@@ -2,7 +2,7 @@ package votbot
 
 import votbot.event.Event.Event
 import votbot.event.handlers.BaseEventHandler
-import votbot.event.{BaseEventHandlerSpec, Event, EventHandler}
+import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.Irc
 import votbot.model.Irc._
@@ -10,7 +10,7 @@ import zio.blocking.Blocking
 import zio.console._
 import zio.random.Random
 import zio.test._
-import zio.{Queue, Ref}
+import zio.{ Queue, Ref }
 
 object Base {
 

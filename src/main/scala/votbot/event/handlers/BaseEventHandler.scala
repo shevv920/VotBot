@@ -2,10 +2,10 @@ package votbot.event.handlers
 import votbot.event.Event._
 import votbot.event.EventHandler
 import votbot.model.Irc
-import votbot.model.Irc.Numeric.{ ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST }
-import votbot.{ Api, BotState, Configuration }
+import votbot.model.Irc.Numeric.{ERR_NICKNAMEINUSE, RPL_ENDOFNAMES, RPL_YOURHOST}
+import votbot.{Api, BotState, Configuration}
 import zio.random.Random
-import zio.{ Ref, ZIO }
+import zio.{Ref, ZIO}
 
 trait BaseEventHandler extends EventHandler {
   val customHandlers: Ref[List[EventHandler]]

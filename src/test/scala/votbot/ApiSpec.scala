@@ -1,5 +1,5 @@
 package votbot
-import votbot.model.Irc.{Channel, ChannelKey, User, UserKey}
+import votbot.model.Irc.{ Channel, ChannelKey, User, UserKey }
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._

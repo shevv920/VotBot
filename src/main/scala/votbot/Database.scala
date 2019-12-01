@@ -1,7 +1,7 @@
 package votbot
-import io.getquill.{Literal, SqliteJdbcContext}
+import io.getquill.{ Literal, SqliteJdbcContext }
 import votbot.model.DB.Quote
-import zio.{Task, ZIO}
+import zio.{ Task, ZIO }
 
 trait Database {
   val database: Database.Service[Any]

@@ -27,10 +27,10 @@ object BaseEventHandlerSpec {
     },
     testM("send nick and user commands on Connected Event") {
       for {
-        api <- ZIO.access[Api](_.api)
+        api     <- ZIO.access[Api](_.api)
         handler <- ZIO.environment[BaseEventHandler]
-        _ <- handler.handle(Connected)
-        all <- api.dequeueAllOutMessages()
+        _       <- handler.handle(Connected)
+        all     <- api.dequeueAllOutMessages()
       } yield assert(all.count(c => c.cmd == Irc.Command.Nick || c.cmd == Irc.Command.User), equalTo(2))
     },
     testM("BotJoin creates channel") {

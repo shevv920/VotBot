@@ -3,7 +3,6 @@ package votbot
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
-import pureconfig.generic.auto._
 import votbot.event.Event._
 import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
 import votbot.event.{ Event, EventHandler }
