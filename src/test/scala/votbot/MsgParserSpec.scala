@@ -21,6 +21,11 @@ object MsgParserSpec {
       MsgParser
         .parse("CAP * ACK :cap1 cap2 cap3")
         .map(m => assert(m, equalTo(RawMessage(Command.Cap, Vector("*", "ACK", "cap1 cap2 cap3")))))
+    },
+    testM("should parse CAP * ACK : (empty caps list)") {
+      MsgParser
+        .parse("CAP * ACK :")
+        .map(m => assert(m, equalTo(RawMessage(Command.Cap, Vector("*", "ACK", "")))))
     }
   )
 }
