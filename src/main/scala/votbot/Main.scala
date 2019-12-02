@@ -7,7 +7,6 @@ import votbot.event.Event._
 import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
 import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
-import votbot.model.Irc._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -15,6 +14,8 @@ import zio.console.{ Console, _ }
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
+import pureconfig.generic.auto._
+import votbot.model.irc.{ Channel, ChannelKey, RawMessage, User, UserKey }
 
 object Main extends App {
   val maxMessageLength = 512

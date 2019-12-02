@@ -2,8 +2,7 @@ package votbot.event
 
 import votbot.Main.VotbotEnv
 import votbot.event.handlers.BaseEventHandler
-import votbot.model.Irc
-import votbot.model.Irc.{ ChannelMode, Command, Prefix, RawMessage }
+import votbot.model.irc.{ ChannelMode, Command, NumericCommand, Prefix, RawMessage }
 import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
@@ -28,7 +27,9 @@ object Event {
   final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
   final case class Quit(user: String, reason: String)                                       extends Event
   final case class NamesList(channel: String, members: List[(String, List[ChannelMode])])   extends Event
-  final case class CapabilityListReceived(caps: List[String])                               extends Event
+  final case class CapabilityList(caps: List[String])                                       extends Event
+  final case class CapabilityAck(caps: List[String])                                        extends Event
+  final case class CapabilityNak(caps: List[String])                                        extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
@@ -53,9 +54,9 @@ object Event {
             else
               PrivateMessage(prefix.nick, args.last)
           }
-        case RawMessage(Command.Numeric(Irc.Numeric.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
+        case RawMessage(Command.Numeric(NumericCommand.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
           Welcome(args.head, prefix.host)
-        case RawMessage(Command.Numeric(Irc.Numeric.RPL_NAMREPLY), args, _) =>
+        case RawMessage(Command.Numeric(NumericCommand.RPL_NAMREPLY), args, _) =>
           val channel = args(2)
           val members = args.last
             .split(" ")
@@ -88,6 +89,17 @@ object Event {
           Quit(prefix.nick, args.mkString)
         case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
           Numeric(cmd, args, prefix)
+        case RawMessage(Command.Cap, args, _) if args.size == 3 =>
+          val subCmd = args(1)
+          val caps   = args(2).split(" ").toList
+          subCmd.toUpperCase match {
+            case "LS" | "LIST" =>
+              CapabilityList(caps)
+            case "ACK" =>
+              CapabilityAck(caps)
+            case "NAK" =>
+              CapabilityNak(caps)
+          }
         case _ => Unknown(ircMsg)
       }
     } yield event

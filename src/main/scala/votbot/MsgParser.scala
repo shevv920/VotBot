@@ -2,8 +2,8 @@ package votbot
 
 import java.nio.charset.StandardCharsets
 
-import votbot.model.Irc.Command.Unknown
-import votbot.model.Irc.{ Command, Prefix, RawMessage }
+import model.irc.Command.Unknown
+import votbot.model.irc.{ Command, Prefix, RawMessage }
 import zio.console._
 import zio.{ Task, UIO, ZIO }
 

@@ -1,8 +1,7 @@
 package votbot
 
 import votbot.event.Event.Event
-import votbot.model.Irc
-import votbot.model.Irc.{ Channel, ChannelKey, User, UserKey }
+import votbot.model.irc.{ Channel, ChannelKey, Command, RawMessage, User, UserKey }
 import zio._
 
 trait Api {
@@ -13,24 +12,24 @@ object Api {
 
   trait Service[R] {
     protected val parseQ: Queue[String]
-    protected val processQ: Queue[Irc.RawMessage]
-    protected val outMessageQ: Queue[Irc.RawMessage]
+    protected val processQ: Queue[RawMessage]
+    protected val outMessageQ: Queue[RawMessage]
     protected val eventQ: Queue[Event]
     protected val knownChannels: Ref[Map[ChannelKey, Channel]]
     protected val knownUsers: Ref[Map[UserKey, User]]
 
     def enqueueEvent(evt: Event*): UIO[Unit]
-    def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit]
+    def enqueueProcess(msg: RawMessage*): UIO[Unit]
     def enqueueParse(raw: String*): UIO[Unit]
-    def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit]
+    def enqueueOutMessage(msg: RawMessage*): UIO[Unit]
     def dequeueEvent(): UIO[Event]
     def dequeueParse(): UIO[String]
 
-    def dequeueOutMessage(): UIO[Irc.RawMessage]
+    def dequeueOutMessage(): UIO[RawMessage]
 
-    def dequeueAllOutMessages(): UIO[List[Irc.RawMessage]]
+    def dequeueAllOutMessages(): UIO[List[RawMessage]]
 
-    def dequeueProcess(): UIO[Irc.RawMessage]
+    def dequeueProcess(): UIO[RawMessage]
     def sendChannelMessage(channel: String, msg: String): UIO[Unit]
     def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
     def allChannels(): Task[List[Channel]]
@@ -143,13 +142,13 @@ trait DefaultApi[R] extends Api.Service[R] {
   override def enqueueEvent(evt: Event*): UIO[Unit] =
     eventQ.offerAll(evt).unit
 
-  override def enqueueProcess(msg: Irc.RawMessage*): UIO[Unit] =
+  override def enqueueProcess(msg: RawMessage*): UIO[Unit] =
     processQ.offerAll(msg).unit
 
   override def enqueueParse(raw: String*): UIO[Unit] =
     parseQ.offerAll(raw).unit
 
-  override def enqueueOutMessage(msg: Irc.RawMessage*): UIO[Unit] =
+  override def enqueueOutMessage(msg: RawMessage*): UIO[Unit] =
     outMessageQ.offerAll(msg).unit
 
   override def dequeueEvent(): UIO[Event] =
@@ -158,19 +157,19 @@ trait DefaultApi[R] extends Api.Service[R] {
   override def dequeueParse(): UIO[String] =
     parseQ.take
 
-  override def dequeueProcess(): UIO[Irc.RawMessage] =
+  override def dequeueProcess(): UIO[RawMessage] =
     processQ.take
 
-  override def dequeueOutMessage(): UIO[Irc.RawMessage] =
+  override def dequeueOutMessage(): UIO[RawMessage] =
     outMessageQ.take
 
-  override def dequeueAllOutMessages(): UIO[List[Irc.RawMessage]] =
+  override def dequeueAllOutMessages(): UIO[List[RawMessage]] =
     outMessageQ.takeAll
 
   override def sendChannelMessage(channel: String, msg: String): UIO[Unit] =
-    outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, channel, msg)).unit
+    outMessageQ.offer(RawMessage(Command.Privmsg, channel, msg)).unit
 
   override def sendPrivateMessage(nick: String, msg: String): UIO[Unit] =
-    outMessageQ.offer(Irc.RawMessage(Irc.Command.Privmsg, nick, msg)).unit
+    outMessageQ.offer(RawMessage(Command.Privmsg, nick, msg)).unit
 
 }

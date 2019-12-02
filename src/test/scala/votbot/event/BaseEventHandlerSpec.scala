@@ -2,8 +2,7 @@ package votbot.event
 import votbot.Api
 import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
-import votbot.model.Irc
-import votbot.model.Irc._
+import votbot.model.irc.{ Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey }
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -31,7 +30,7 @@ object BaseEventHandlerSpec {
         handler <- ZIO.environment[BaseEventHandler]
         _       <- handler.handle(Connected)
         all     <- api.dequeueAllOutMessages()
-      } yield assert(all.count(c => c.cmd == Irc.Command.Nick || c.cmd == Irc.Command.User), equalTo(2))
+      } yield assert(all.count(c => c.cmd == Command.Nick || c.cmd == Command.User), equalTo(2))
     },
     testM("BotJoin creates channel") {
       for {
