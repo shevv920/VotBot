@@ -1,7 +1,7 @@
 package votbot.event.handlers
 import votbot.event.Event._
 import votbot.event.EventHandler
-import votbot.model.irc.{ Channel, ChannelKey, Command, NumericCommand, RawMessage, UserKey }
+import votbot.model.irc._
 import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
 import zio.{ Ref, ZIO }
@@ -50,11 +50,16 @@ trait BaseEventHandler extends EventHandler {
                 RawMessage(Command.CapReq, ":" + supportedAndRequired.mkString(" "))
               val capEnd = RawMessage(Command.CapEnd)
               api.enqueueOutMessage(capReqCmd, capEnd)
+            case CapabilityAck(caps) =>
+              val capsSupported = caps
+                .map(Capabilities.withNameInsensitiveOption)
+                .filter(_.nonEmpty)
+                .map(_.get)
+              state.update(s => s.copy(capabilities = s.capabilities ++ capsSupported))
             case Welcome(nick, host) =>
-              val capEndCmd = RawMessage(Command.CapEnd, "")
-              val joinCmd   = RawMessage(Command.Join, cfg.bot.autoJoinChannels.mkString(","))
+              val joinCmd = RawMessage(Command.Join, cfg.bot.autoJoinChannels.mkString(","))
               api
-                .enqueueOutMessage(capEndCmd, joinCmd)
+                .enqueueOutMessage(joinCmd)
                 .flatMap(_ => state.update(_.copy(nick = nick)))
             case BotJoin(chName) =>
               api.addChannel(Channel(chName, List.empty, Set.empty))

@@ -40,7 +40,7 @@ object Event {
       event = ircMsg match {
         case RawMessage(Command.Ping, args, _) =>
           Ping(args.headOption)
-        case RawMessage(Command.Privmsg, args, Some(prefix)) =>
+        case RawMessage(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(state.nick) =>
           if (args.last.startsWith("\u0001")) {
             val special = args.last.drop(1).takeWhile(_ != ' ')
             val msg     = args.last.drop(1 + special.length)
