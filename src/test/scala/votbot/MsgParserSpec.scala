@@ -1,6 +1,6 @@
 package votbot
 
-import votbot.model.irc.{ Command, NumericCommand, RawMessage }
+import votbot.model.irc.{ Command, NumericCommand, Prefix, RawMessage }
 import zio.test.Assertion.equalTo
 import zio.test.{ assert, suite, testM }
 
@@ -26,6 +26,13 @@ object MsgParserSpec {
       MsgParser
         .parse("CAP * ACK :")
         .map(m => assert(m, equalTo(RawMessage(Command.Cap, Vector("*", "ACK", "")))))
+    },
+    testM("should parse ACCOUNT commands") {
+      MsgParser
+        .parse(":nick!user@host ACCOUNT accountName")
+        .map(m =>
+          assert(m, equalTo(RawMessage(Command.Account, Vector("accountName"), Some(Prefix("nick", "user", "host")))))
+        )
     }
   )
 }

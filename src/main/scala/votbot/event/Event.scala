@@ -30,6 +30,8 @@ object Event {
   final case class CapabilityList(caps: List[String])                                       extends Event
   final case class CapabilityAck(caps: List[String])                                        extends Event
   final case class CapabilityNak(caps: List[String])                                        extends Event
+  final case class UserLoggedIn(prefix: Prefix, accountName: String)                        extends Event
+  final case class UserLoggedOut(prefix: Prefix)                                            extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
@@ -87,8 +89,6 @@ object Event {
             Notice(prefix.nick, args.last)
         case RawMessage(Command.Quit, args, Some(prefix)) =>
           Quit(prefix.nick, args.mkString)
-        case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
-          Numeric(cmd, args, prefix)
         case RawMessage(Command.Cap, args, _) if args.size == 3 =>
           val subCmd = args(1)
           val caps   = args(2).split(" ").toList
@@ -100,6 +100,15 @@ object Event {
             case "NAK" =>
               CapabilityNak(caps)
           }
+        case RawMessage(Command.Account, args, Some(prefix)) if args.nonEmpty =>
+          args.head match {
+            case "*" =>
+              UserLoggedOut(prefix)
+            case accName =>
+              UserLoggedIn(prefix, accName)
+          }
+        case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
+          Numeric(cmd, args, prefix)
         case _ => Unknown(ircMsg)
       }
     } yield event

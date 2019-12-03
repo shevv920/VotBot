@@ -22,14 +22,13 @@ object Api {
     def enqueueProcess(msg: RawMessage*): UIO[Unit]
     def enqueueParse(raw: String*): UIO[Unit]
     def enqueueOutMessage(msg: RawMessage*): UIO[Unit]
+
     def dequeueEvent(): UIO[Event]
     def dequeueParse(): UIO[String]
-
     def dequeueOutMessage(): UIO[RawMessage]
-
     def dequeueAllOutMessages(): UIO[List[RawMessage]]
-
     def dequeueProcess(): UIO[RawMessage]
+
     def sendChannelMessage(channel: String, msg: String): UIO[Unit]
     def sendPrivateMessage(nick: String, msg: String): UIO[Unit]
     def allChannels(): Task[List[Channel]]
@@ -47,10 +46,18 @@ object Api {
     def getUser(name: UserKey): Task[User]
     def addChannelToUser(chKey: ChannelKey, uKey: UserKey): Task[Unit]
     def removeChannelFromUser(chKey: ChannelKey, uKey: UserKey): Task[Unit]
+    def isUserLoggedIn(userKey: UserKey): Task[Boolean]
+    def getUserAccountName(userKey: UserKey): Task[String]
   }
 }
 
 trait DefaultApi[R] extends Api.Service[R] {
+
+  override def getUserAccountName(userKey: UserKey): Task[String] =
+    getUser(userKey).map(_.accountName.getOrElse("*"))
+
+  override def isUserLoggedIn(userKey: UserKey): Task[Boolean] =
+    getUser(userKey).map(_.accountName.nonEmpty)
 
   override def removeChannelFromUser(chName: ChannelKey, uName: UserKey): Task[Unit] =
     for {

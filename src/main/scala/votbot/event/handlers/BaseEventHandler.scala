@@ -91,6 +91,16 @@ trait BaseEventHandler extends EventHandler {
                 user <- api.getUser(UserKey(userName))
                 _    <- api.removeUser(user)
               } yield ()
+            case UserLoggedIn(prefix, accountName) =>
+              for {
+                user <- api.getUser(UserKey(prefix.nick))
+                _    <- api.addUser(user.copy(accountName = Some(accountName)))
+              } yield ()
+            case UserLoggedOut(prefix) =>
+              for {
+                user <- api.getUser(UserKey(prefix.nick))
+                _    <- api.addUser(user.copy(accountName = None))
+              } yield ()
           }
       handlers <- customHandlers.get
       _        <- ZIO.foreach(handlers)(handler => handler.handle(event))

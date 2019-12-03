@@ -7,6 +7,7 @@ sealed trait Command extends EnumEntry with UpperWords
 object Command extends Enum[Command] {
   val values = findValues
 
+  final case object Account extends Command
   final case object Join    extends Command
   final case object Part    extends Command
   final case object Pass    extends Command

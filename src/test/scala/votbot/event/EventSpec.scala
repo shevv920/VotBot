@@ -1,6 +1,6 @@
 package votbot.event
-import votbot.event.Event.CapabilityAck
-import votbot.model.irc.{ Command, RawMessage }
+import votbot.event.Event.{ CapabilityAck, UserLoggedIn, UserLoggedOut }
+import votbot.model.irc.{ Command, Prefix, RawMessage }
 import zio.test.Assertion.equalTo
 import zio.test.{ assert, suite, testM }
 
@@ -16,6 +16,22 @@ object EventSpec {
       for {
         event <- Event.ircToEvent(RawMessage(Command.Cap, Vector("*", "ACK", "")))
       } yield assert(event, equalTo(CapabilityAck(List(""))))
+    },
+    testM("Recognize ACCOUNT accountName (logged in msg)") {
+      val prefix = Prefix("nick", "user", "host")
+      for {
+        event <- Event.ircToEvent(
+                  RawMessage(Command.Account, Vector("accountName"), Some(prefix))
+                )
+      } yield assert(event, equalTo(UserLoggedIn(prefix, "accountName")))
+    },
+    testM("Recognize ACCOUNT * msg (logged out)") {
+      val prefix = Prefix("nick", "user", "host")
+      for {
+        event <- Event.ircToEvent(
+                  RawMessage(Command.Account, Vector("*"), Some(prefix))
+                )
+      } yield assert(event, equalTo(UserLoggedOut(prefix)))
     }
   )
 }

@@ -1,6 +1,5 @@
 package votbot.model
 
-
 package object irc {
 
   sealed trait Message
@@ -31,5 +30,5 @@ package object irc {
 
   final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
   final case class ChannelMode(mode: String, args: Option[String])
-  final case class User(name: String, channels: Set[ChannelKey])
+  final case class User(name: String, channels: Set[ChannelKey], accountName: Option[String] = None)
 }
