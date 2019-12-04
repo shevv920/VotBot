@@ -9,4 +9,5 @@ object Capabilities extends Enum[Capability] {
 
   final case object IdentifyMsg   extends Capability
   final case object AccountNotify extends Capability
+  final case object ExtendedJoin  extends Capability
 }

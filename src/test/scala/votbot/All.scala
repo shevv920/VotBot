@@ -40,7 +40,10 @@ object Base {
       override val knownUsers: Ref[Map[UserKey, User]]          = users
     }
     override val customHandlers: Ref[List[EventHandler]] = handlers
-    override val state: Ref[State]                       = st
+
+    override val state: BotState.Service[Any] = new BotStateLive[Any] {
+      override val state: Ref[State] = st
+    }
   }
 
   val envM = env.toManaged_

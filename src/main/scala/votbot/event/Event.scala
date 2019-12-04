@@ -38,11 +38,12 @@ object Event {
 
   def ircToEvent(ircMsg: RawMessage): ZIO[BotState, Throwable, Event] =
     for {
-      state <- ZIO.accessM[BotState](_.state.get)
+      state       <- ZIO.access[BotState](_.state)
+      currentNick <- state.currentNick()
       event = ircMsg match {
         case RawMessage(Command.Ping, args, _) =>
           Ping(args.headOption)
-        case RawMessage(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(state.nick) =>
+        case RawMessage(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(currentNick) =>
           if (args.last.startsWith("\u0001")) {
             val special = args.last.drop(1).takeWhile(_ != ' ')
             val msg     = args.last.drop(1 + special.length)
@@ -72,9 +73,9 @@ object Event {
             }
             .toList
           NamesList(channel, members)
-        case RawMessage(Command.Join, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(state.nick) =>
+        case RawMessage(Command.Join, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
           BotJoin(channel.mkString(", "))
-        case RawMessage(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(state.nick) =>
+        case RawMessage(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
           BotPart(channel.mkString(", "))
         case RawMessage(Command.Join, args, Some(prefix)) =>
           Join(prefix.nick, args.mkString(", "))

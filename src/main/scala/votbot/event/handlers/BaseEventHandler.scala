@@ -36,7 +36,7 @@ trait BaseEventHandler extends EventHandler {
                 n       <- ZIO.access[Random](_.random.nextInt(99))
                 newNick = cfg.bot.nick + n
                 _       <- api.enqueueOutMessage(RawMessage(Command.Nick, newNick))
-                _       <- state.update(s => s.copy(nick = newNick))
+                _       <- state.setNick(newNick)
               } yield ()
             case Connected =>
               val capLsCmd = RawMessage(Command.CapLs)
@@ -55,12 +55,12 @@ trait BaseEventHandler extends EventHandler {
                 .map(Capabilities.withNameInsensitiveOption)
                 .filter(_.nonEmpty)
                 .map(_.get)
-              state.update(s => s.copy(capabilities = s.capabilities ++ capsSupported))
+              state.addCapabilities(capsSupported: _*)
             case Welcome(nick, host) =>
               val joinCmd = RawMessage(Command.Join, cfg.bot.autoJoinChannels.mkString(","))
               api
                 .enqueueOutMessage(joinCmd)
-                .flatMap(_ => state.update(_.copy(nick = nick)))
+                .flatMap(_ => state.setNick(nick))
             case BotJoin(chName) =>
               api.addChannel(Channel(chName, List.empty, Set.empty))
             case BotPart(channel) =>

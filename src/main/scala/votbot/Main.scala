@@ -47,7 +47,10 @@ object Main extends App {
         } yield new VotbotEnv with BasicEnv with Api with BaseEventHandler with Blocking.Live {
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
-          override val state: Ref[State]                       = st
+
+          override val state: BotState.Service[Any] = new BotStateLive[Any] {
+            override protected val state: Ref[State] = st
+          }
 
           override val api: Api.Service[Any] = new DefaultApi[Any] {
             override protected val parseQ: Queue[String]                        = inQ
