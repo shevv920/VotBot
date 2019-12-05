@@ -2,7 +2,7 @@ package votbot.event
 
 import votbot.Main.VotbotEnv
 import votbot.event.handlers.BaseEventHandler
-import votbot.model.irc.{ ChannelMode, Command, NumericCommand, Prefix, RawMessage }
+import votbot.model.irc._
 import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
@@ -14,6 +14,7 @@ object Event {
   final case class ChannelMessage(sender: String, channel: String, msg: String)             extends IncomingMessage
   final case class PrivateMessage(sender: String, msg: String)                              extends IncomingMessage
   final case class Join(user: String, channel: String)                                      extends Event
+  final case class ExtendedJoin(user: String, channel: String, accountName: String)         extends Event
   final case class BotJoin(channel: String)                                                 extends Event
   final case class Part(user: String, channel: String, reason: String)                      extends Event
   final case class BotPart(channel: String)                                                 extends Event
@@ -30,16 +31,17 @@ object Event {
   final case class CapabilityList(caps: List[String])                                       extends Event
   final case class CapabilityAck(caps: List[String])                                        extends Event
   final case class CapabilityNak(caps: List[String])                                        extends Event
-  final case class UserLoggedIn(prefix: Prefix, accountName: String)                        extends Event
-  final case class UserLoggedOut(prefix: Prefix)                                            extends Event
+  final case class UserLoggedIn(nick: String, accountName: String)                          extends Event
+  final case class UserLoggedOut(nick: String)                                              extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
 
   def ircToEvent(ircMsg: RawMessage): ZIO[BotState, Throwable, Event] =
     for {
-      state       <- ZIO.access[BotState](_.state)
-      currentNick <- state.currentNick()
+      state          <- ZIO.access[BotState](_.state)
+      currentNick    <- state.currentNick()
+      isExtendedJoin <- state.isCapabilityEnabled(Capabilities.ExtendedJoin)
       event = ircMsg match {
         case RawMessage(Command.Ping, args, _) =>
           Ping(args.headOption)
@@ -73,12 +75,10 @@ object Event {
             }
             .toList
           NamesList(channel, members)
-        case RawMessage(Command.Join, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
-          BotJoin(channel.mkString(", "))
+        case rm @ RawMessage(Command.Join, _, _) =>
+          parseJoin(currentNick, isExtendedJoin, rm)
         case RawMessage(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
           BotPart(channel.mkString(", "))
-        case RawMessage(Command.Join, args, Some(prefix)) =>
-          Join(prefix.nick, args.mkString(", "))
         case RawMessage(Command.Part, args, Some(prefix)) if args.size > 1 =>
           Part(prefix.nick, args.dropRight(1).mkString(", "), args.last) //last - reason
         case RawMessage(Command.Part, args, Some(prefix)) =>
@@ -104,15 +104,27 @@ object Event {
         case RawMessage(Command.Account, args, Some(prefix)) if args.nonEmpty =>
           args.head match {
             case "*" =>
-              UserLoggedOut(prefix)
+              UserLoggedOut(prefix.nick)
             case accName =>
-              UserLoggedIn(prefix, accName)
+              UserLoggedIn(prefix.nick, accName)
           }
         case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
           Numeric(cmd, args, prefix)
         case _ => Unknown(ircMsg)
       }
     } yield event
+
+  private def parseJoin(botNick: String, isExtended: Boolean, message: RawMessage): Event =
+    message match {
+      case RawMessage(Command.Join, args, Some(prefix)) if prefix.nick.equalsIgnoreCase(botNick) =>
+        BotJoin(args.head)
+      case RawMessage(Command.Join, args, Some(prefix)) if !isExtended =>
+        Join(prefix.nick, args.head)
+      case RawMessage(Command.Join, args, Some(prefix)) if args.size > 1 =>
+        val channel     = args.head
+        val accountName = args.tail.head
+        ExtendedJoin(prefix.nick, channel, accountName)
+    }
 
   def eventProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {

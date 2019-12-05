@@ -72,6 +72,16 @@ trait BaseEventHandler extends EventHandler {
                 _     <- api.addChannelMember(chKey, user)
                 _     <- api.addChannelToUser(chKey, UserKey(user.name))
               } yield ()
+            case ExtendedJoin(name, channel, accountName) =>
+              for {
+                _ <- api.enqueueEvent(Join(name, channel))
+                _ <- ZIO.whenCase(accountName) {
+                      case "*" =>
+                        ZIO.unit
+                      case accName =>
+                        api.enqueueEvent(UserLoggedIn(name, accName))
+                    }
+              } yield ()
             case Part(user, channel, reason) =>
               api.removeChannelMember(ChannelKey(channel), UserKey(user))
             case NamesList(chName, members) =>
@@ -91,14 +101,14 @@ trait BaseEventHandler extends EventHandler {
                 user <- api.getUser(UserKey(userName))
                 _    <- api.removeUser(user)
               } yield ()
-            case UserLoggedIn(prefix, accountName) =>
+            case UserLoggedIn(nick, accountName) =>
               for {
-                user <- api.getUser(UserKey(prefix.nick))
+                user <- api.getUser(UserKey(nick))
                 _    <- api.addUser(user.copy(accountName = Some(accountName)))
               } yield ()
-            case UserLoggedOut(prefix) =>
+            case UserLoggedOut(nick) =>
               for {
-                user <- api.getUser(UserKey(prefix.nick))
+                user <- api.getUser(UserKey(nick))
                 _    <- api.addUser(user.copy(accountName = None))
               } yield ()
           }

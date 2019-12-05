@@ -1,8 +1,8 @@
 package votbot.event
-import votbot.Api
+import votbot.{ Api, BotState }
 import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
-import votbot.model.irc.{ Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey }
+import votbot.model.irc.{ Capabilities, Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey }
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._

@@ -16,6 +16,7 @@ object BotState {
     def currentCapabilities(): ZIO[R, Nothing, Set[Capability]]
     def setNick(nick: String): Task[Unit]
     def addCapabilities(caps: Capability*): Task[Unit]
+    def isCapabilityEnabled(cap: Capability): Task[Boolean]
   }
 }
 
@@ -23,6 +24,7 @@ trait BotStateLive[R] extends BotState.Service[R] {
   override def currentNick(): ZIO[R, Nothing, String]                  = state.get.map(_.nick)
   override def currentCapabilities(): ZIO[R, Nothing, Set[Capability]] = state.get.map(_.capabilities)
   override def setNick(nick: String): Task[Unit]                       = state.update(s => s.copy(nick = nick)).unit
+  override def isCapabilityEnabled(cap: Capability): Task[Boolean]     = state.get.map(_.capabilities.contains(cap))
 
   override def addCapabilities(caps: Capability*): Task[Unit] =
     state.update(s => s.copy(capabilities = s.capabilities ++ caps)).unit

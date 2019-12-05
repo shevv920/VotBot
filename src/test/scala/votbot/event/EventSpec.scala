@@ -1,6 +1,8 @@
 package votbot.event
-import votbot.event.Event.{ CapabilityAck, UserLoggedIn, UserLoggedOut }
-import votbot.model.irc.{ Command, Prefix, RawMessage }
+import votbot.BotState
+import votbot.event.Event.{ CapabilityAck, ExtendedJoin, UserLoggedIn, UserLoggedOut }
+import votbot.model.irc.{ Capabilities, Command, Prefix, RawMessage }
+import zio.ZIO
 import zio.test.Assertion.equalTo
 import zio.test.{ assert, suite, testM }
 
@@ -23,7 +25,7 @@ object EventSpec {
         event <- Event.ircToEvent(
                   RawMessage(Command.Account, Vector("accountName"), Some(prefix))
                 )
-      } yield assert(event, equalTo(UserLoggedIn(prefix, "accountName")))
+      } yield assert(event, equalTo(UserLoggedIn(prefix.nick, "accountName")))
     },
     testM("Recognize ACCOUNT * msg (logged out)") {
       val prefix = Prefix("nick", "user", "host")
@@ -31,7 +33,15 @@ object EventSpec {
         event <- Event.ircToEvent(
                   RawMessage(Command.Account, Vector("*"), Some(prefix))
                 )
-      } yield assert(event, equalTo(UserLoggedOut(prefix)))
+      } yield assert(event, equalTo(UserLoggedOut(prefix.nick)))
+    },
+    testM("Recognize Join msg when its extended join capability") {
+      val prefix = Prefix("nick", "user", "host")
+      val msg    = RawMessage(Command.Join, Vector("#votbot", "*", ""), Some(prefix))
+      for {
+        _     <- ZIO.accessM[BotState](_.state.addCapabilities(Capabilities.ExtendedJoin))
+        event <- Event.ircToEvent(msg)
+      } yield assert(event, equalTo(ExtendedJoin("nick", "#votbot", "*")))
     }
   )
 }
