@@ -29,7 +29,8 @@ object Base {
     with BaseEventHandler
     with Random.Live
     with Blocking.Live
-    with TestDatabase {
+    with TestDatabase
+    with HttpClient {
 
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                        = inQ
@@ -44,6 +45,7 @@ object Base {
     override val state: BotState.Service[Any] = new BotStateLive[Any] {
       override val state: Ref[State] = st
     }
+    override val httpClient: HttpClient.Service[Any] = DefaultHttpClient
   }
 
   val envM = env.toManaged_

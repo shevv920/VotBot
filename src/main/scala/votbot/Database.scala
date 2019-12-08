@@ -11,8 +11,9 @@ trait Database {
 object Database {
 
   trait Service[R] {
-    val ctx: SqliteJdbcContext[Literal]
+    protected val ctx: SqliteJdbcContext[Literal]
 
+    def getRandomByKey(key: String): Task[Option[Quote]]
     def findQuotes(key: String): Task[List[Quote]]
     def addQuote(quote: Quote): Task[Unit]
     def addQuotes(quotes: List[Quote]): Task[Unit]
@@ -25,6 +26,14 @@ trait TestDatabase extends Database {
   val database = new Database.Service[Any] {
     override val ctx: SqliteJdbcContext[Literal] = new SqliteJdbcContext(Literal, "database")
     import ctx._
+
+    override def getRandomByKey(key: String): Task[Option[Quote]] = {
+      val rawQ = quote { key: String =>
+        infix"""SELECT * FROM quote WHERE id IN (SELECT id FROM quote WHERE key = $key ORDER BY RANDOM() LIMIT 1)"""
+          .as[Query[Quote]]
+      }
+      ZIO.effect { ctx.run(rawQ(lift(key))) }.map(_.headOption)
+    }
 
     override def cleanQuotes(): Task[Unit] =
       ZIO.effect { ctx.run(quote(query[Quote].delete)) }

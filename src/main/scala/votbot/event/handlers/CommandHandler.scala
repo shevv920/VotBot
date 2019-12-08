@@ -11,14 +11,14 @@ trait CommandHandler extends EventHandler {
   val description: String
   def helpMessage: String = commands.mkString("[", ", ", "]") + " - " + description //fixme escape commands strings
 
-  def response(channel: String, command: String, arg: String): ZIO[HandlerEnv, Throwable, Unit]
+  def response(sender: String, channel: String, command: String, args: String): ZIO[HandlerEnv, Throwable, Unit]
 
   override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       regex <- mkRegex
       _ <- ZIO.whenCase(event) {
             case ChannelMessage(sender, channel, regex(cmd, arg)) =>
-              response(channel, cmd, arg)
+              response(sender, channel, cmd, arg)
           }
     } yield ()
 

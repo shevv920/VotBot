@@ -48,10 +48,14 @@ object Api {
     def removeChannelFromUser(chKey: ChannelKey, uKey: UserKey): Task[Unit]
     def isUserLoggedIn(userKey: UserKey): Task[Boolean]
     def getUserAccountName(userKey: UserKey): Task[String]
+    def askForAccByName(name: String): Task[Unit]
   }
 }
 
 trait DefaultApi[R] extends Api.Service[R] {
+
+  override def askForAccByName(name: String): Task[Unit] =
+    enqueueOutMessage(RawMessage(Command.Who, Vector(name, "+n%na")))
 
   override def getUserAccountName(userKey: UserKey): Task[String] =
     getUser(userKey).map(_.accountName.getOrElse("*"))

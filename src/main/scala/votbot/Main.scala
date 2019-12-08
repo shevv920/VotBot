@@ -7,6 +7,7 @@ import votbot.event.Event._
 import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
 import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
+import votbot.model.irc._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -15,7 +16,7 @@ import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import pureconfig.generic.auto._
-import votbot.model.irc.{ Channel, ChannelKey, RawMessage, User, UserKey }
+import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
   val maxMessageLength = 512
@@ -30,21 +31,29 @@ object Main extends App {
       with Api
       with BaseEventHandler
       with Blocking
+      with HttpClient
+      with Database
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic
       .provideSomeM(
         for {
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("../application.conf"))) //fixme - paths
+          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("application.conf"))) //fixme - paths
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[ChannelKey, Channel])
-          handlers <- Ref.make(List[EventHandler](Quotes, Help))
+          handlers <- Ref.make(List[EventHandler](Quotes, Help, UltimateQuotes))
           users    <- Ref.make(Map.empty[UserKey, User])
-        } yield new VotbotEnv with BasicEnv with Api with BaseEventHandler with Blocking.Live {
+        } yield new VotbotEnv
+          with BasicEnv
+          with Api
+          with BaseEventHandler
+          with Blocking.Live
+          with HttpClient
+          with TestDatabase {
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
 
@@ -60,6 +69,8 @@ object Main extends App {
             override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
             override protected val knownUsers: Ref[Map[UserKey, User]]          = users
           }
+
+          override val httpClient: HttpClient.Service[Any] = DefaultHttpClient
         }
       )
       .either
@@ -81,9 +92,9 @@ object Main extends App {
               _            <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
               reader       <- reader(channel).fork
               writer       <- writer(channel).fork
-              parser       <- MsgParser.parser().forever.fork
-              processor    <- processor().forever.fork
-              evtProcessor <- Event.eventProcessor().forever.fork
+              parser       <- MsgParser.parser().forever.fork //todo daemon?
+              processor    <- processor().forever.fork //todo daemon?
+              evtProcessor <- Event.eventProcessor().forever.fork //todo daemon?
               _            <- reader.zip(writer).await
               _            <- parser.zip(processor).await
               _            <- evtProcessor.await

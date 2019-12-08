@@ -18,6 +18,16 @@ object DatabaseSpec {
           _  <- db.addQuotes(List(q, q2))
           r  <- db.findQuotes("LENIN")
         } yield assert(r, equalTo(List(q, q2)))
+      },
+      testM("get random quote by key") {
+        for {
+          db <- ZIO.access[Database](_.database)
+          q  = Quote(0, "STALIN", "some.url.su", "bla bla bla", Some("STALIN"))
+          q2 = Quote(1, "STALIN", "some.url.su", "bla bla bla2", Some("STALIN"))
+          _  <- db.cleanQuotes()
+          _  <- db.addQuotes(List(q, q2))
+          q  <- db.getRandomByKey("STALIN")
+        } yield assert(q.nonEmpty, isTrue)
       }
     )
   )

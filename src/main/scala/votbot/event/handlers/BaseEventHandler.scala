@@ -33,7 +33,7 @@ trait BaseEventHandler extends EventHandler {
               ZIO.unit
             case Numeric(NumericCommand.ERR_NICKNAMEINUSE, _, prefix) =>
               for {
-                n       <- ZIO.access[Random](_.random.nextInt(99))
+                n       <- ZIO.accessM[Random](_.random.nextInt(99))
                 newNick = cfg.bot.nick + n
                 _       <- api.enqueueOutMessage(RawMessage(Command.Nick, newNick))
                 _       <- state.setNick(newNick)
@@ -86,13 +86,16 @@ trait BaseEventHandler extends EventHandler {
               api.removeChannelMember(ChannelKey(channel), UserKey(user))
             case NamesList(chName, members) =>
               for {
-                channelMembers <- ZIO.foreach(members) { tuple =>
+                currentNick <- state.currentNick()
+                //filter out bot from names list
+                channelMembers <- ZIO.foreach(members.filterNot(_._1.equalsIgnoreCase(currentNick))) { tuple =>
                                    for {
                                      user  <- api.getOrCreateUser(tuple._1)
                                      modes = tuple._2
                                    } yield user
                                  }
                 _ <- ZIO.foreach(channelMembers)(api.addChannelMember(ChannelKey(chName), _))
+                _ <- ZIO.foreach(channelMembers)(u => api.askForAccByName(u.name))
               } yield ()
             case Numeric(NumericCommand.RPL_ENDOFNAMES, args, prefix) =>
               ZIO.unit
@@ -113,6 +116,6 @@ trait BaseEventHandler extends EventHandler {
               } yield ()
           }
       handlers <- customHandlers.get
-      _        <- ZIO.foreach(handlers)(handler => handler.handle(event))
+      _        <- ZIO.foreach(handlers)(handler => handler.handle(event).catchAll(_ => ZIO.unit).fork)
     } yield ()
 }

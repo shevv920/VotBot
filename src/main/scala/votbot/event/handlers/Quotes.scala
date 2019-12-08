@@ -9,7 +9,7 @@ object Quotes extends CommandHandler {
 
   override val commands: List[String] = List("q", "й", "quote", "йгщеу")
 
-  override def response(channel: String, cmd: String, args: String): ZIO[HandlerEnv, Throwable, Unit] =
+  override def response(sender: String, channel: String, cmd: String, args: String): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api    <- ZIO.access[Api](_.api)
       random <- ZIO.access[Random](_.random)

@@ -108,6 +108,12 @@ object Event {
             case accName =>
               UserLoggedIn(prefix.nick, accName)
           }
+        case RawMessage(Command.Numeric(NumericCommand.RPL_WHOREPLYX), args, Some(prefix)) =>
+          args match {
+            case Vector(_, targetNick, targetAcc) if targetAcc != "0" =>
+              UserLoggedIn(targetNick, targetAcc)
+            case _ => Unknown(ircMsg)
+          }
         case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
           Numeric(cmd, args, prefix)
         case _ => Unknown(ircMsg)

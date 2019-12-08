@@ -34,6 +34,7 @@ object NumericCommand {
   val RPL_ENDOFEXCEPTLIST   = "349"
   val RPL_VERSION           = "351"
   val RPL_WHOREPLY          = "352"
+  val RPL_WHOREPLYX         = "354"
   val RPL_ENDOFWHO          = "315"
   val RPL_NAMREPLY          = "353"
   val RPL_ENDOFNAMES        = "366"
