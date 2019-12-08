@@ -63,7 +63,7 @@ object ApiSpec {
         _    <- api.changeUserNick(testUserName1, testUserName2)
         oldU <- api.findUser(testUserName1)
         newU <- api.findUser(testUserName2)
-      } yield assert(oldU, isNone) && assert(newU, equalTo(Some(testEmptyUser.copy(name = testUserName2))))
+      } yield assert(oldU, isNone) && assert(newU, isSome(equalTo(testEmptyUser.copy(name = testUserName2))))
     },
     testM("change nick removes accountName from new user") {
       for {

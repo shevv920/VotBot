@@ -15,6 +15,7 @@ import zio.console.{ Console, _ }
 import zio.nio.SocketAddress
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
+import zio.system
 import pureconfig.generic.auto._
 import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
@@ -34,14 +35,14 @@ object Main extends App {
       with HttpClient
       with Database
 
-  def getCfgPath(): Task[Path] =
-    ZIO.effect(Paths.get(System.getProperty("user.dir") + "/" + "application.conf"))
+  def mkCfgPath(): Task[Path] =
+    ZIO.effect(Paths.get(system.property("user.dir").map(_.getOrElse(".")) + "/" + "application.conf"))
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic
       .provideSomeM(
         for {
-          cfgPath  <- getCfgPath()
+          cfgPath  <- mkCfgPath()
           cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](cfgPath))
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
