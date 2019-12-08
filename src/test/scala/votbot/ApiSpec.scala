@@ -56,7 +56,7 @@ object ApiSpec {
         channels <- api.allChannels()
       } yield assert(mbUser, isNone) && assert(channels.filter(_.members.contains(UserKey(testUserName1))), isEmpty)
     },
-    testM("change nick ") {
+    testM("change nick removes old user and adds new one") {
       for {
         api  <- ZIO.access[Api](_.api)
         _    <- api.addUser(testEmptyUser)
@@ -64,6 +64,30 @@ object ApiSpec {
         oldU <- api.findUser(testUserName1)
         newU <- api.findUser(testUserName2)
       } yield assert(oldU, isNone) && assert(newU, equalTo(Some(testEmptyUser.copy(name = testUserName2))))
+    },
+    testM("change nick removes accountName from new user") {
+      for {
+        api  <- ZIO.access[Api](_.api)
+        _    <- api.addUser(testEmptyUser)
+        _    <- api.changeUserNick(testUserName1, testUserName2)
+        newU <- api.getUser(UserKey(testUserName2))
+      } yield assert(newU.accountName, isNone)
+    },
+    testM("change nick affects user channels") {
+      for {
+        api   <- ZIO.access[Api](_.api)
+        _     <- api.addUser(testEmptyUser)
+        _     <- api.addChannel(testEmptyChannel)
+        _     <- api.addChannelToUser(ChannelKey(testEmptyChannel.name), UserKey(testEmptyUser.name))
+        _     <- api.addUserToChannel(ChannelKey(testEmptyChannel.name), testEmptyUser)
+        _     <- api.changeUserNick(testUserName1, testUserName2)
+        oldU  <- api.findUser(testUserName1)
+        newU  <- api.findUser(testUserName2)
+        newCh <- api.getChannel(ChannelKey(testEmptyChannel.name))
+      } yield assert(oldU, isNone) &&
+        assert(newCh.members, contains(UserKey(testUserName2))) &&
+        assert(newU.nonEmpty, isTrue) &&
+        assert(newU.get.channels.contains(ChannelKey(testEmptyChannel.name)), isTrue)
     }
   )
 }

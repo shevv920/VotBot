@@ -75,7 +75,7 @@ trait BaseEventHandler extends EventHandler {
               for {
                 user  <- api.getOrCreateUser(name)
                 chKey = ChannelKey(channel)
-                _     <- api.addChannelMember(chKey, user)
+                _     <- api.addUserToChannel(chKey, user)
                 _     <- api.addChannelToUser(chKey, UserKey(user.name))
               } yield ()
             case ExtendedJoin(name, channel, accountName) =>
@@ -100,7 +100,7 @@ trait BaseEventHandler extends EventHandler {
                                      modes = tuple._2
                                    } yield user
                                  }
-                _ <- ZIO.foreach(channelMembers)(api.addChannelMember(ChannelKey(chName), _))
+                _ <- ZIO.foreach(channelMembers)(api.addUserToChannel(ChannelKey(chName), _))
                 _ <- ZIO.foreach(channelMembers)(u => api.askForAccByName(u.name))
               } yield ()
             case Numeric(NumericCommand.RPL_ENDOFNAMES, args, prefix) =>

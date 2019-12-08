@@ -34,8 +34,8 @@ object Api {
     def allChannels(): Task[List[Channel]]
     def addChannel(channel: Channel): UIO[Unit]
     def removeChannel(chKey: ChannelKey): UIO[Unit]
-    def addChannelMember(chKey: ChannelKey, userKey: UserKey): Task[Unit]
-    def addChannelMember(chKey: ChannelKey, user: User): Task[Unit]
+    def addUserToChannel(chKey: ChannelKey, userKey: UserKey): Task[Unit]
+    def addUserToChannel(chKey: ChannelKey, user: User): Task[Unit]
     def removeChannelMember(chKey: ChannelKey, userKey: UserKey): Task[Unit]
     def getChannel(chKey: ChannelKey): Task[Channel]
     def addUser(user: User): Task[Unit]
@@ -58,10 +58,10 @@ trait DefaultApi[R] extends Api.Service[R] {
   override def changeUserNick(oldNick: String, newNick: String): Task[Unit] =
     for {
       oldUser <- getUser(UserKey(oldNick))
-      newUser = oldUser.copy(name = newNick)
+      newUser = oldUser.copy(name = newNick, accountName = None)
       _       <- addUser(newUser)
       _       <- removeUser(oldUser)
-      _       <- ZIO.foreach(newUser.channels)(ch => addChannelMember(ch, newUser))
+      _       <- ZIO.foreach(newUser.channels)(ch => addUserToChannel(ch, newUser))
     } yield ()
 
   override def askForAccByName(name: String): Task[Unit] =
@@ -132,13 +132,13 @@ trait DefaultApi[R] extends Api.Service[R] {
       _       <- removeChannelFromUser(chName, memberName)
     } yield ()
 
-  override def addChannelMember(chKey: ChannelKey, uKey: UserKey): Task[Unit] =
+  override def addUserToChannel(chKey: ChannelKey, uKey: UserKey): Task[Unit] =
     for {
       user <- getOrCreateUser(uKey.str)
-      _    <- addChannelMember(chKey, user)
+      _    <- addUserToChannel(chKey, user)
     } yield ()
 
-  override def addChannelMember(chKey: ChannelKey, user: User): Task[Unit] =
+  override def addUserToChannel(chKey: ChannelKey, user: User): Task[Unit] =
     for {
       channel <- getChannel(chKey)
       nCh     = channel.copy(members = channel.members + UserKey(user.name))
