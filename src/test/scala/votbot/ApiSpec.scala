@@ -6,10 +6,11 @@ import zio.test.Assertion._
 import zio.test._
 
 object ApiSpec {
-  private val testUserName1              = "testUserName1"
-  private val testNoAccEmptyChannelsUser = User(testUserName1, Set.empty, None)
-  private val testChannelName            = "#test_channel"
-  private val testEmptyChannel           = Channel(testChannelName, List.empty, Set.empty)
+  private val testUserName1    = "testUserName1"
+  private val testUserName2    = "testUserName2"
+  private val testEmptyUser    = User(testUserName1, Set.empty, None)
+  private val testChannelName  = "#test_channel"
+  private val testEmptyChannel = Channel(testChannelName, List.empty, Set.empty)
 
   val tests = suite("Api spec")(
     testM("addChannel creates channel") {
@@ -22,9 +23,9 @@ object ApiSpec {
     testM("addUser creates user") {
       for {
         api     <- ZIO.access[Api](_.api)
-        srcUser = testNoAccEmptyChannelsUser
+        srcUser = testEmptyUser
         _       <- api.addUser(srcUser)
-        user    <- api.getUser(UserKey(testNoAccEmptyChannelsUser.name))
+        user    <- api.getUser(UserKey(testEmptyUser.name))
       } yield assert(user, equalTo(srcUser))
     },
     testM("addChannelToUser add new channel to user's channel set") {
@@ -57,9 +58,12 @@ object ApiSpec {
     },
     testM("change nick ") {
       for {
-        api <- ZIO.access[Api](_.api)
-
-      } yield assert(true, isTrue)
+        api  <- ZIO.access[Api](_.api)
+        _    <- api.addUser(testEmptyUser)
+        _    <- api.changeUserNick(testUserName1, testUserName2)
+        oldU <- api.findUser(testUserName1)
+        newU <- api.findUser(testUserName2)
+      } yield assert(oldU, isNone) && assert(newU, equalTo(Some(testEmptyUser.copy(name = testUserName2))))
     }
   )
 }
