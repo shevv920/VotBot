@@ -33,6 +33,7 @@ object Event {
   final case class CapabilityNak(caps: List[String])                                        extends Event
   final case class UserLoggedIn(nick: String, accountName: String)                          extends Event
   final case class UserLoggedOut(nick: String)                                              extends Event
+  final case class NickChanged(oldNick: String, newNick: String)                            extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
 
   final case object Connected extends Event
@@ -108,6 +109,8 @@ object Event {
             case accName =>
               UserLoggedIn(prefix.nick, accName)
           }
+        case RawMessage(Command.Nick, args, Some(prefix)) if args.nonEmpty =>
+          NickChanged(prefix.nick, args.head)
         case RawMessage(Command.Numeric(NumericCommand.RPL_WHOREPLYX), args, Some(prefix)) =>
           args match {
             case Vector(_, targetNick, targetAcc) if targetAcc != "0" =>

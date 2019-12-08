@@ -56,6 +56,12 @@ trait BaseEventHandler extends EventHandler {
                 .filter(_.nonEmpty)
                 .map(_.get)
               state.addCapabilities(capsSupported: _*)
+            case CapabilityNak(caps) =>
+              val capsToRemove = caps
+                .map(Capabilities.withNameInsensitiveOption)
+                .filter(_.nonEmpty)
+                .map(_.get)
+              state.removeCapabilities(capsToRemove: _*)
             case Welcome(nick, host) =>
               val joinCmd = RawMessage(Command.Join, cfg.bot.autoJoinChannels.mkString(","))
               api
@@ -99,6 +105,8 @@ trait BaseEventHandler extends EventHandler {
               } yield ()
             case Numeric(NumericCommand.RPL_ENDOFNAMES, args, prefix) =>
               ZIO.unit
+            case NickChanged(oldNick, newNick) =>
+              api.changeUserNick(oldNick, newNick)
             case Quit(userName, reason) =>
               for {
                 user <- api.getUser(UserKey(userName))

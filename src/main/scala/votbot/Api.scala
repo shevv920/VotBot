@@ -49,10 +49,20 @@ object Api {
     def isUserLoggedIn(userKey: UserKey): Task[Boolean]
     def getUserAccountName(userKey: UserKey): Task[String]
     def askForAccByName(name: String): Task[Unit]
+    def changeUserNick(oldNick: String, newNick: String): Task[Unit]
   }
 }
 
 trait DefaultApi[R] extends Api.Service[R] {
+
+  override def changeUserNick(oldNick: String, newNick: String): Task[Unit] =
+    for {
+      oldUser <- getUser(UserKey(oldNick))
+      newUser = oldUser.copy(name = newNick)
+      _       <- addUser(newUser)
+      _       <- removeUser(oldUser)
+      _       <- ZIO.foreach(newUser.channels)(ch => addChannelMember(ch, newUser))
+    } yield ()
 
   override def askForAccByName(name: String): Task[Unit] =
     enqueueOutMessage(RawMessage(Command.Who, Vector(name, "+n%na")))
@@ -124,14 +134,16 @@ trait DefaultApi[R] extends Api.Service[R] {
 
   override def addChannelMember(chKey: ChannelKey, uKey: UserKey): Task[Unit] =
     for {
+      user <- getOrCreateUser(uKey.str)
+      _    <- addChannelMember(chKey, user)
+    } yield ()
+
+  override def addChannelMember(chKey: ChannelKey, user: User): Task[Unit] =
+    for {
       channel <- getChannel(chKey)
-      user    <- getOrCreateUser(uKey.str)
       nCh     = channel.copy(members = channel.members + UserKey(user.name))
       _       <- knownChannels.update(m => m + (chKey -> nCh))
     } yield ()
-
-  override def addChannelMember(chKey: ChannelKey, member: User): Task[Unit] =
-    addChannelMember(chKey, UserKey(member.name))
 
   override def getChannel(chName: ChannelKey): Task[Channel] =
     for {
