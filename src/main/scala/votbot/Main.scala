@@ -1,7 +1,7 @@
 package votbot
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
+import java.nio.file.{ Path, Paths }
 
 import votbot.event.Event._
 import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
@@ -34,11 +34,15 @@ object Main extends App {
       with HttpClient
       with Database
 
+  def getCfgPath(): Task[Path] =
+    ZIO.effect(Paths.get(System.getProperty("user.dir") + "/" + "application.conf"))
+
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic
       .provideSomeM(
         for {
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](Paths.get("application.conf"))) //fixme - paths
+          cfgPath  <- getCfgPath()
+          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](cfgPath))
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
