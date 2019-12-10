@@ -1,11 +1,14 @@
 package votbot.event.handlers.ultimatequotes
 
 import sttp.model.Uri
-import votbot.{ Api, Database, EventHandlerError, HttpClient }
+import votbot.database.QuotesRepo
+import votbot.HttpClient
 import votbot.event.handlers.ultimatequotes.UltimateQuotes.HandlerEnv
 import votbot.model.DB.Quote
+import votbot.model.EventHandlerError
 import zio.ZIO
 import zio.console._
+
 import scala.util.Try
 import scala.util.matching.Regex
 
@@ -24,7 +27,7 @@ object Add extends SubCommand {
                   EventHandlerError("Regex compile error: " + e.getMessage + " regex: " + regex, UltimateQuotes)
                 )
         httpClient <- ZIO.access[HttpClient](_.httpClient)
-        db         <- ZIO.access[Database](_.database)
+        db         <- ZIO.access[QuotesRepo](_.quotesRepo)
         uriContent <- httpClient.quick(uri)
         matches    <- ZIO.effect(reg.findAllIn(uriContent.body).toList)
         _          <- putStrLn("Found: " + matches.mkString(", "))

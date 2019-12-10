@@ -1,11 +1,14 @@
 package votbot
 
+import votbot.Main.{ BasicEnv, VotbotEnv }
+import votbot.database.{ DatabaseProvider, QuotesRepo, TestDatabase, TestQuotesRepo }
 import votbot.event.Event.Event
 import votbot.event.handlers.BaseEventHandler
 import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler, EventSpec }
 import votbot.model.Bot.State
 import votbot.model.irc.{ Channel, ChannelKey, RawMessage, User, UserKey }
 import zio.blocking.Blocking
+import zio.clock.Clock
 import zio.console._
 import zio.random.Random
 import zio.test._
@@ -22,15 +25,8 @@ object Base {
     users    <- Ref.make(Map.empty[UserKey, User])
     handlers <- Ref.make(List.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
-  } yield new Api
-    with Console.Live
-    with TestConfiguration
-    with BotState
-    with BaseEventHandler
-    with Random.Live
-    with Blocking.Live
-    with TestDatabase
-    with HttpClient {
+  } yield new VotbotEnv with TestConfiguration with BasicEnv with TestDatabase with QuotesRepo with Blocking.Live {
+    override val quotesRepo: QuotesRepo.Service[Any] = TestQuotesRepo
 
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                        = inQ

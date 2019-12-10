@@ -1,10 +1,10 @@
 package votbot
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ Path, Paths }
+import java.nio.file.Paths
 
 import votbot.event.Event._
-import votbot.event.handlers.{ BaseEventHandler, Help, Quotes }
+import votbot.event.handlers.{ BaseEventHandler, Help }
 import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.irc._
@@ -17,6 +17,7 @@ import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import zio.system
 import pureconfig.generic.auto._
+import votbot.database.{ DatabaseProvider, QuotesRepo, TestDatabase, TestQuotesRepo }
 import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
@@ -33,32 +34,36 @@ object Main extends App {
       with BaseEventHandler
       with Blocking
       with HttpClient
-      with Database
+      with DatabaseProvider
+      with QuotesRepo
 
-  def mkCfgPath(): Task[Path] =
-    ZIO.effect(Paths.get(system.property("user.dir").map(_.getOrElse(".")) + "/" + "application.conf"))
+  private def mkCfgPath() =
+    system
+      .property("user.dir")
+      .map(_.getOrElse(".") + "/" + "application.conf")
+      .map(Paths.get(_))
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic
       .provideSomeM(
         for {
-          cfgPath  <- mkCfgPath()
-          cfg      <- ZIO.fromEither(pureconfig.loadConfig[Config](cfgPath))
+          cfgPath <- mkCfgPath()
+          cfg <- ZIO
+                  .fromEither(
+                    pureconfig
+                      .loadConfig[Config](cfgPath)
+                      .orElse(pureconfig.loadConfig[Config](Paths.get("../application.conf")))
+                  )
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
           pQ       <- Queue.unbounded[RawMessage]
           evtQ     <- Queue.unbounded[Event]
           chs      <- Ref.make(Map.empty[ChannelKey, Channel])
-          handlers <- Ref.make(List[EventHandler](Quotes, Help, UltimateQuotes))
+          handlers <- Ref.make(List[EventHandler](Help, UltimateQuotes))
           users    <- Ref.make(Map.empty[UserKey, User])
-        } yield new VotbotEnv
-          with BasicEnv
-          with Api
-          with BaseEventHandler
-          with Blocking.Live
-          with HttpClient
-          with TestDatabase {
+        } yield new VotbotEnv with BasicEnv with Blocking.Live with TestDatabase with QuotesRepo {
+          override val quotesRepo: QuotesRepo.Service[Any]     = TestQuotesRepo
           override val customHandlers: Ref[List[EventHandler]] = handlers
           override val config: Config                          = cfg
 
