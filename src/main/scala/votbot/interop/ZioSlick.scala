@@ -14,5 +14,4 @@ object ZioSlick {
       res <- ZIO.fromFuture(implicit ec => db.run(action))
     } yield res
 
-  implicit def DBIO_to_ZIOSLICK[T](dbio: DBIO[T]): ZIOSlick[T] = ZioSlick[T](dbio)
 }
