@@ -7,7 +7,7 @@ import votbot.model.DB.Quote
 object QuoteTable {
 
   class Quotes(tag: Tag) extends Table[Quote](tag, "quotes") {
-    def id: Rep[Long]               = column[Long]("id", O.PrimaryKey)
+    def id: Rep[Long]               = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def key: Rep[String]            = column[String]("key")
     def sourceUri: Rep[String]      = column[String]("source_uri")
     def txt: Rep[String]            = column[String]("txt")

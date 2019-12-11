@@ -17,7 +17,14 @@ import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import zio.system
 import pureconfig.generic.auto._
-import votbot.database.{ DatabaseProvider, QuotesRepo, TestDatabase, TestQuotesRepo }
+import votbot.database.{
+  ChannelSettingsRepo,
+  DatabaseProvider,
+  QuotesRepo,
+  TestChannelSettingsRepo,
+  TestDatabase,
+  TestQuotesRepo
+}
 import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
@@ -36,6 +43,7 @@ object Main extends App {
       with HttpClient
       with DatabaseProvider
       with QuotesRepo
+      with ChannelSettingsRepo
 
   private def mkCfgPath() =
     system
@@ -44,7 +52,7 @@ object Main extends App {
       .map(Paths.get(_))
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
-    mainLogic
+    mainLogic(args)
       .provideSomeM(
         for {
           cfgPath <- mkCfgPath()
@@ -63,9 +71,10 @@ object Main extends App {
           handlers <- Ref.make(List[EventHandler](Help, UltimateQuotes))
           users    <- Ref.make(Map.empty[UserKey, User])
         } yield new VotbotEnv with BasicEnv with Blocking.Live with TestDatabase with QuotesRepo {
-          override val quotesRepo: QuotesRepo.Service[Any]     = TestQuotesRepo
-          override val customHandlers: Ref[List[EventHandler]] = handlers
-          override val config: Config                          = cfg
+          override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
+          override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
+          override val customHandlers: Ref[List[EventHandler]]               = handlers
+          override val config: Config                                        = cfg
 
           override val state: BotState.Service[Any] = new BotStateLive[Any] {
             override protected val state: Ref[State] = st
@@ -86,8 +95,13 @@ object Main extends App {
       .either
       .map(_.fold(e => { println(e); 1 }, _ => 0))
 
-  def mainLogic: ZIO[VotbotEnv, Any, Unit] =
+  def mainLogic(args: List[String]): ZIO[VotbotEnv, Any, Unit] =
     for {
+      qsRepo <- ZIO.access[QuotesRepo](_.quotesRepo)
+      csRepo <- ZIO.access[ChannelSettingsRepo](_.channelSettingsRepo)
+      _ <- ZIO.when(args.contains("--initdb")) {
+            qsRepo.createSchemaIfNotExists *> csRepo.createSchemaIfNotExists
+          }
       client <- client.fork
       _      <- client.await
     } yield ()
@@ -102,9 +116,9 @@ object Main extends App {
               _            <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
               reader       <- reader(channel).fork
               writer       <- writer(channel).fork
-              parser       <- MsgParser.parser().forever.fork //todo daemon?
-              processor    <- processor().forever.fork //todo daemon?
-              evtProcessor <- Event.eventProcessor().forever.fork //todo daemon?
+              parser       <- MsgParser.parser().forever.fork
+              processor    <- processor().forever.fork
+              evtProcessor <- Event.eventProcessor().forever.fork
               _            <- reader.zip(writer).await
               _            <- parser.zip(processor).await
               _            <- evtProcessor.await
