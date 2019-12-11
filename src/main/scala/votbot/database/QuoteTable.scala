@@ -10,7 +10,7 @@ object QuoteTable {
     def id: Rep[Long]               = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def key: Rep[String]            = column[String]("key")
     def sourceUri: Rep[String]      = column[String]("source_uri")
-    def txt: Rep[String]            = column[String]("txt")
+    def txt: Rep[String]            = column[String]("txt", O.Unique)
     def author: Rep[Option[String]] = column[Option[String]]("author")
     def * : ProvenShape[Quote]      = (id, key, sourceUri, txt, author) <> (Quote.tupled, Quote.unapply)
   }

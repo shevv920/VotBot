@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 
 object Count extends SubCommand {
   override val cmdRegex: Regex     = """count (\w{1,12})""".r
-  override val description: String = "посчитать сколько цитату по ключу в базе"
+  override val description: String = "Сколько цитат в базе по ключу: uq count KEY"
 
   override def action(subCmd: String, isAdmin: Boolean): ZIO[HandlerEnv, Throwable, Option[String]] =
     subCmd match {
