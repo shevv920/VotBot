@@ -1,7 +1,14 @@
 package votbot
 
 import votbot.Main.{ BasicEnv, VotbotEnv }
-import votbot.database.{ DatabaseProvider, QuotesRepo, TestDatabase, TestQuotesRepo }
+import votbot.database.{
+  ChannelSettingsRepo,
+  DatabaseProvider,
+  QuotesRepo,
+  TestChannelSettingsRepo,
+  TestDatabase,
+  TestQuotesRepo
+}
 import votbot.event.Event.Event
 import votbot.event.handlers.BaseEventHandler
 import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler, EventSpec }
@@ -25,8 +32,15 @@ object Base {
     users    <- Ref.make(Map.empty[UserKey, User])
     handlers <- Ref.make(List.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
-  } yield new VotbotEnv with TestConfiguration with BasicEnv with TestDatabase with QuotesRepo with Blocking.Live {
-    override val quotesRepo: QuotesRepo.Service[Any] = TestQuotesRepo
+  } yield new VotbotEnv
+    with TestConfiguration
+    with BasicEnv
+    with TestDatabase
+    with ChannelSettingsRepo
+    with QuotesRepo
+    with Blocking.Live {
+    override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
+    override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
 
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                        = inQ

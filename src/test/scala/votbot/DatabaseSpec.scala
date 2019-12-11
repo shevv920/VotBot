@@ -1,7 +1,8 @@
 package votbot
 
-import votbot.database.QuotesRepo
+import votbot.database.{ ChannelSettingsRepo, QuotesRepo }
 import votbot.model.DB.Quote
+import votbot.model.irc.ChannelKey
 import zio.ZIO
 import zio.test.Assertion._
 import zio.test._
@@ -33,6 +34,21 @@ object DatabaseSpec {
           _  <- db.addQuotes(List(q, q2))
           q  <- db.getRandomByKey("STALIN")
         } yield assert(q.nonEmpty, isTrue)
+      }
+    ),
+    suite("ChannelSettings")(
+      testM("create schema if not exists") {
+        for {
+          db         <- ZIO.access[ChannelSettingsRepo](_.channelSettingsRepo)
+          _          <- db.createSchemaIfNotExists
+          mbSettings <- db.findByKey(ChannelKey("12345"))
+        } yield assert(mbSettings, isNone)
+      },
+      testM("find settings") {
+        for {
+          db         <- ZIO.access[ChannelSettingsRepo](_.channelSettingsRepo)
+          mbSettings <- db.findByKey(ChannelKey("1235"))
+        } yield assert(mbSettings, isNone)
       }
     )
   )

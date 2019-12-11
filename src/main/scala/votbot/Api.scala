@@ -134,7 +134,7 @@ trait DefaultApi[R] extends Api.Service[R] {
 
   override def addUserToChannel(chKey: ChannelKey, uKey: UserKey): Task[Unit] =
     for {
-      user <- getOrCreateUser(uKey.str)
+      user <- getOrCreateUser(uKey.value)
       _    <- addUserToChannel(chKey, user)
     } yield ()
 
