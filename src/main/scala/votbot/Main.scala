@@ -12,11 +12,12 @@ import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.{ Console, _ }
-import zio.nio.SocketAddress
+import zio.nio.{ InetSocketAddress, SocketAddress }
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import zio.system
 import pureconfig.generic.auto._
+import zio.duration._
 import votbot.database.{
   ChannelSettingsRepo,
   DatabaseProvider,
@@ -29,7 +30,7 @@ import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
   val maxMessageLength = 512
-  trait BasicEnv extends Console.Live with Clock.Live with Random.Live
+  trait BaseEnv extends Console.Live with Clock.Live with Random.Live
 
   trait VotbotEnv
       extends Console
@@ -70,7 +71,7 @@ object Main extends App {
           chs      <- Ref.make(Map.empty[ChannelKey, Channel])
           handlers <- Ref.make(List[EventHandler](Help, UltimateQuotes))
           users    <- Ref.make(Map.empty[UserKey, User])
-        } yield new VotbotEnv with BasicEnv with Blocking.Live with TestDatabase with QuotesRepo {
+        } yield new VotbotEnv with BaseEnv with Blocking.Live with TestDatabase with QuotesRepo {
           override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
           override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
           override val customHandlers: Ref[List[EventHandler]]               = handlers
@@ -102,28 +103,38 @@ object Main extends App {
       _ <- ZIO.when(args.contains("--initdb")) {
             qsRepo.createSchemaIfNotExists *> csRepo.createSchemaIfNotExists
           }
-      client <- client.fork
+      client <- client().fork
       _      <- client.await
     } yield ()
 
-  def client: ZIO[VotbotEnv, Exception, Unit] =
+  def client(): ZIO[VotbotEnv, Exception, Unit] =
     for {
       config <- ZIO.access[Configuration](_.config)
-      addr   <- SocketAddress.inetSocketAddress(config.server.address, config.server.port)
-      _ <- AsynchronousSocketChannel().use { channel =>
-            for {
-              _            <- channel.connect(addr)
-              _            <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
-              reader       <- reader(channel).fork
-              writer       <- writer(channel).fork
-              parser       <- MsgParser.parser().forever.fork
-              processor    <- processor().forever.fork
-              evtProcessor <- Event.eventProcessor().forever.fork
-              _            <- reader.zip(writer).await
-              _            <- parser.zip(processor).await
-              _            <- evtProcessor.await
-            } yield ()
-          }
+      _ <- AsynchronousSocketChannel()
+            .use { channel =>
+              for {
+                addr <- SocketAddress.inetSocketAddress(config.server.address, config.server.port)
+                _    <- putStrLn("connecting to: " + addr.toString())
+                _    <- connection(channel, addr)
+              } yield ()
+            }
+            .onError(e => putStrLn(e.untraced.prettyPrint))
+            .retry(Schedule.spaced(5.seconds))
+            .fork
+      parser       <- MsgParser.parser().forever.fork
+      processor    <- processor().forever.fork
+      evtProcessor <- Event.eventProcessor().forever.fork
+      _            <- parser.zip(processor).await
+      _            <- evtProcessor.await
+    } yield ()
+
+  def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[VotbotEnv, Exception, Unit] =
+    for {
+      _      <- channel.connect(addr)
+      _      <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
+      reader <- reader(channel).fork
+      writer <- writer(channel).fork
+      _      <- reader.zip(writer).await
     } yield ()
 
   def reader(
