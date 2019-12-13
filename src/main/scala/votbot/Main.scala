@@ -16,6 +16,7 @@ import zio.nio.{ InetSocketAddress, SocketAddress }
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import zio.system
+import pureconfig._
 import pureconfig.generic.auto._
 import zio.duration._
 import votbot.database.{
@@ -58,11 +59,8 @@ object Main extends App {
         for {
           cfgPath <- mkCfgPath()
           cfg <- ZIO
-                  .fromEither(
-                    pureconfig
-                      .loadConfig[Config](cfgPath)
-                      .orElse(pureconfig.loadConfig[Config](Paths.get("../application.conf")))
-                  )
+                  .fromEither(ConfigSource.file(cfgPath).load[Config])
+                  .orElse(ZIO.fromEither(ConfigSource.default.load[Config]))
           st       <- Ref.make(State(cfg.bot.nick))
           inQ      <- Queue.unbounded[String]
           outQ     <- Queue.unbounded[RawMessage]
