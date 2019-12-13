@@ -1,8 +1,7 @@
 package votbot.event.handlers.ultimatequotes
-import votbot.database.{ DatabaseProvider, QuotesRepo }
+import votbot.database.QuotesRepo
 import votbot.event.handlers.ultimatequotes.UltimateQuotes.HandlerEnv
 import zio.ZIO
-import zio.console.putStrLn
 
 import scala.util.matching.Regex
 
@@ -14,7 +13,7 @@ object Get extends SubCommand {
     case cmdRegex(key) =>
       for {
         db <- ZIO.access[QuotesRepo](_.quotesRepo)
-        qs <- db.getRandomByKey(key.toLowerCase)
+        qs <- db.findRandomByKey(key.toLowerCase)
       } yield qs.map(_.txt)
     case _ =>
       ZIO.succeed(None)

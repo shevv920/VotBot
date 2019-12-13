@@ -14,8 +14,9 @@ trait QuotesRepo {
 object QuotesRepo {
 
   trait Service[R] {
+    def findRandom(): ZIO[DatabaseProvider, DBError, Option[Quote]]
     def createSchemaIfNotExists: ZIO[DatabaseProvider, DBError, Unit]
-    def getRandomByKey(key: String): ZIO[DatabaseProvider, DBError, Option[Quote]]
+    def findRandomByKey(key: String): ZIO[DatabaseProvider, DBError, Option[Quote]]
     def findQuotes(key: String): ZIO[DatabaseProvider, DBError, List[Quote]]
     def addQuote(quote: Quote): ZIO[DatabaseProvider, DBError, Long]
     def addQuotes(quotes: List[Quote]): ZIO[DatabaseProvider, DBError, Option[Int]]
@@ -26,6 +27,16 @@ object QuotesRepo {
 object TestQuotesRepo extends QuotesRepo.Service[Any] {
   import slick.jdbc.SQLiteProfile.api._
   private val quotes = TableQuery[Quotes]
+
+  implicit val getQuotesResult: GetResult[Quote] =
+    GetResult(r => Quote(r.nextLong(), r.nextString(), r.nextString(), r.nextString(), r.nextStringOption()))
+
+  override def findRandom(): ZIO[DatabaseProvider, DBError, Option[Quote]] = {
+    val q = sql"""SELECT * FROM QUOTES WHERE id IN (SELECT id FROM QUOTES ORDER BY RANDOM() LIMIT 1)"""
+      .as[Quote]
+      .headOption
+    ZioSlick(q).refineOrDie(e => DBError("Failed to get random quote", e))
+  }
 
   override def createSchemaIfNotExists: ZIO[DatabaseProvider, DBError, Unit] = {
     val q = quotes.schema.createIfNotExists
@@ -50,9 +61,8 @@ object TestQuotesRepo extends QuotesRepo.Service[Any] {
   override def cleanQuotes(): ZIO[DatabaseProvider, DBError, Int] =
     ZioSlick(quotes.delete).refineOrDie(e => DBError("Error clean quotes: " + e.getMessage, e))
 
-  override def getRandomByKey(key: String): ZIO[DatabaseProvider, DBError, Option[Quote]] = {
-    implicit val getQuotesResult: GetResult[Quote] =
-      GetResult(r => Quote(r.nextLong(), r.nextString(), r.nextString(), r.nextString(), r.nextStringOption()))
+  override def findRandomByKey(key: String): ZIO[DatabaseProvider, DBError, Option[Quote]] = {
+
     val q = sql"""SELECT * FROM QUOTES WHERE id IN (SELECT id FROM QUOTES WHERE key = $key ORDER BY RANDOM() LIMIT 1)"""
       .as[Quote]
       .headOption

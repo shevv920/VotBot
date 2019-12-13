@@ -32,7 +32,7 @@ object DatabaseSpec {
           q  = Quote(2, "STALIN", "some.url.su", "bla bla bla", Some("STALIN"))
           q2 = Quote(3, "STALIN", "some.url.su", "bla bla bla2", Some("STALIN"))
           _  <- db.addQuotes(List(q, q2))
-          q  <- db.getRandomByKey("STALIN")
+          q  <- db.findRandomByKey("STALIN")
         } yield assert(q.nonEmpty, isTrue)
       }
     ),

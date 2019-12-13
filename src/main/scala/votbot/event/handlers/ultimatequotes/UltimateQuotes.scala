@@ -3,7 +3,7 @@ package votbot.event.handlers.ultimatequotes
 import votbot.event.handlers.CommandHandler
 import votbot.event.handlers.ultimatequotes.UltimateQuotes.HandlerEnv
 import votbot.model.irc.UserKey
-import votbot.{ Api, Configuration, HttpClient }
+import votbot.{ Api, Configuration }
 import zio.ZIO
 
 import scala.util.matching.Regex
@@ -15,7 +15,7 @@ trait SubCommand {
 }
 
 object UltimateQuotes extends CommandHandler {
-  private val subCommands: List[SubCommand] = List(Add, Get, Count)
+  private val subCommands: List[SubCommand] = List(Add, Get, Count, Random)
   override val commands: List[String]       = List("uq")
   override val description: String          = "ultimate quotes"
 
