@@ -5,6 +5,7 @@ import votbot.model.irc._
 import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
 import zio.{ Ref, ZIO }
+import zio.console.putStrLn
 
 trait BaseEventHandler extends EventHandler {
   val customHandlers: Ref[List[EventHandler]]
@@ -124,6 +125,11 @@ trait BaseEventHandler extends EventHandler {
               } yield ()
           }
       handlers <- customHandlers.get
-      _        <- ZIO.foreach(handlers)(handler => handler.handle(event).catchAll(_ => ZIO.unit).fork)
+      _ <- ZIO.foreach(handlers)(handler =>
+            handler
+              .handle(event)
+              .catchAll(e => putStrLn("Handlers error : " + e.getClass.getSimpleName + " " + e.getCause) *> ZIO.unit)
+              .fork
+          )
     } yield ()
 }

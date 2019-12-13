@@ -50,10 +50,32 @@ object Api {
     def getUserAccountName(userKey: UserKey): Task[String]
     def askForAccByName(name: String): Task[Unit]
     def changeUserNick(oldNick: String, newNick: String): Task[Unit]
+    def findChannel(channelKey: ChannelKey): Task[Option[Channel]]
+    def leaveChannel(channelKey: ChannelKey): Task[Unit]
+    def joinChannel(channelName: String): Task[Unit]
   }
 }
 
 trait DefaultApi[R] extends Api.Service[R] {
+
+  override def joinChannel(channelName: String): Task[Unit] =
+    for {
+      channel <- findChannel(ChannelKey(channelName))
+      _ <- ZIO.when(channel.isEmpty) {
+            enqueueOutMessage(RawMessage(Command.Join, channelName))
+          }
+    } yield ()
+
+  override def leaveChannel(channelKey: ChannelKey): Task[Unit] =
+    for {
+      channel <- findChannel(channelKey)
+      _ <- ZIO.when(channel.nonEmpty) {
+            enqueueOutMessage(RawMessage(Command.Part, channel.get.name))
+          }
+    } yield ()
+
+  override def findChannel(channelKey: ChannelKey): Task[Option[Channel]] =
+    knownChannels.get.map(_.get(channelKey))
 
   override def changeUserNick(oldNick: String, newNick: String): Task[Unit] =
     for {

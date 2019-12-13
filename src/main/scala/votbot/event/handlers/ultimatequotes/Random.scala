@@ -10,10 +10,12 @@ object Random extends SubCommand {
   override val description: String = "Random quote"
 
   override def action(subCmd: String, isAdmin: Boolean): ZIO[VotbotEnv, Throwable, Option[String]] = subCmd match {
-    case cmdRegex(_) =>
+    case cmdRegex() =>
       for {
         db <- ZIO.access[QuotesRepo](_.quotesRepo)
         qs <- db.findRandom()
       } yield qs.map(_.txt)
+    case _ =>
+      ZIO.succeed(None)
   }
 }

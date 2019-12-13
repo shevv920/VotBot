@@ -103,6 +103,7 @@ object Main extends App {
             qsRepo.createSchemaIfNotExists *> csRepo.createSchemaIfNotExists
           }
       client <- client().fork
+      clc    <- ConsoleControl.parse().fork
       _      <- client.await
     } yield ()
 
