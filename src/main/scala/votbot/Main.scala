@@ -23,14 +23,14 @@ import votbot.database.{
   DatabaseProvider,
   QuotesRepo,
   TestChannelSettingsRepo,
-  TestDatabase,
+  TestDatabaseProvider,
   TestQuotesRepo
 }
 import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
   val maxMessageLength = 512
-  trait BaseEnv extends Console.Live with Clock.Live with Random.Live
+  trait BaseEnv extends Console.Live with Clock.Live with Random.Live with Blocking.Live
 
   trait VotbotEnv
       extends Console
@@ -71,7 +71,7 @@ object Main extends App {
           chs      <- Ref.make(Map.empty[ChannelKey, Channel])
           handlers <- Ref.make(List[EventHandler](Help, UltimateQuotes))
           users    <- Ref.make(Map.empty[UserKey, User])
-        } yield new VotbotEnv with BaseEnv with Blocking.Live with TestDatabase with QuotesRepo {
+        } yield new VotbotEnv with BaseEnv with TestDatabaseProvider with QuotesRepo {
           override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
           override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
           override val customHandlers: Ref[List[EventHandler]]               = handlers

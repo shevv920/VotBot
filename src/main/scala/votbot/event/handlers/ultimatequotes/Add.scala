@@ -2,17 +2,15 @@ package votbot.event.handlers.ultimatequotes
 
 import org.jsoup.Jsoup
 import sttp.model.Uri
-import votbot.database.QuotesRepo
 import votbot.HttpClient
+import votbot.database.QuotesRepo
 import votbot.event.handlers.ultimatequotes.UltimateQuotes.HandlerEnv
 import votbot.model.DB.Quote
 import votbot.model.EventHandlerError
 import zio.ZIO
-import zio.console._
 
-import scala.util.Try
-import scala.util.matching.Regex
 import scala.jdk.CollectionConverters._
+import scala.util.matching.Regex
 
 object Add extends SubCommand {
   override val cmdRegex: Regex = """(?i)add uri=(.*)\sselector=(.*) key=(\w{1,12})""".r

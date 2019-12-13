@@ -1,12 +1,12 @@
 package votbot
 
-import votbot.Main.{ BasicEnv, VotbotEnv }
+import votbot.Main.{ BaseEnv, VotbotEnv }
 import votbot.database.{
   ChannelSettingsRepo,
   DatabaseProvider,
   QuotesRepo,
   TestChannelSettingsRepo,
-  TestDatabase,
+  TestDatabaseProvider,
   TestQuotesRepo
 }
 import votbot.event.Event.Event
@@ -34,8 +34,8 @@ object Base {
     st       <- Ref.make(State("votbot"))
   } yield new VotbotEnv
     with TestConfiguration
-    with BasicEnv
-    with TestDatabase
+    with BaseEnv
+    with TestDatabaseProvider
     with ChannelSettingsRepo
     with QuotesRepo
     with Blocking.Live {
