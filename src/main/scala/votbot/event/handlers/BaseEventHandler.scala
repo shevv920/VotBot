@@ -128,7 +128,7 @@ trait BaseEventHandler extends EventHandler {
       _ <- ZIO.foreach(handlers)(handler =>
             handler
               .handle(event)
-              .catchAll(e => putStrLn("Handlers error : " + e.getClass.getSimpleName + " " + e.getCause) *> ZIO.unit)
+              .catchAll(e => putStrLn("Handlers error : " + e.getClass.getSimpleName + " " + e.getCause))
               .fork
           )
     } yield ()
