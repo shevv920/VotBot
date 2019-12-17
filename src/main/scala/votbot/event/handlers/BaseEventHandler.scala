@@ -8,16 +8,16 @@ import zio.{ Ref, ZIO }
 import zio.console.putStrLn
 
 trait BaseEventHandler extends EventHandler {
-  val customHandlers: Ref[List[EventHandler]]
+  val customHandlers: Ref[Set[EventHandler]]
 
   def addCustom(handler: EventHandler): ZIO[Any, Throwable, Unit] =
     customHandlers
-      .update(hs => handler :: hs)
+      .update(hs => hs + handler)
       .unit
 
   def removeCustom(handler: EventHandler): ZIO[Any, Throwable, Unit] =
     customHandlers
-      .update(_.filterNot(h => handler == h))
+      .update(hs => hs - handler)
       .unit
 
   override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =

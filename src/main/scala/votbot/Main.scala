@@ -65,12 +65,12 @@ object Main extends App {
       pQ       <- Queue.unbounded[RawMessage]
       evtQ     <- Queue.unbounded[Event]
       chs      <- Ref.make(Map.empty[ChannelKey, Channel])
-      handlers <- Ref.make(List[EventHandler](Help, UltimateQuotes))
+      handlers <- Ref.make(Set[EventHandler](Help, UltimateQuotes))
       users    <- Ref.make(Map.empty[UserKey, User])
     } yield new VotbotEnv with BaseEnv with TestDatabaseProvider with QuotesRepo {
       override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
       override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
-      override val customHandlers: Ref[List[EventHandler]]               = handlers
+      override val customHandlers: Ref[Set[EventHandler]]                = handlers
       override val config: Config                                        = cfg
 
       override val state: BotState.Service[Any] = new BotStateLive[Any] {
