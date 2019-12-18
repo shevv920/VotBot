@@ -20,9 +20,11 @@ import pureconfig._
 import pureconfig.generic.auto._
 import zio.duration._
 import votbot.database.{
+  ChannelHandlersRepo,
   ChannelSettingsRepo,
   DatabaseProvider,
   QuotesRepo,
+  TestChannelHandlersRepo,
   TestChannelSettingsRepo,
   TestDatabaseProvider,
   TestQuotesRepo
@@ -46,6 +48,7 @@ object Main extends App {
       with DatabaseProvider
       with QuotesRepo
       with ChannelSettingsRepo
+      with ChannelHandlersRepo
 
   private def mkCfgPath() =
     system
@@ -67,11 +70,15 @@ object Main extends App {
       chs      <- Ref.make(Map.empty[ChannelKey, Channel])
       handlers <- Ref.make(Set[EventHandler](Help, UltimateQuotes))
       users    <- Ref.make(Map.empty[UserKey, User])
-    } yield new VotbotEnv with BaseEnv with TestDatabaseProvider with QuotesRepo {
-      override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
-      override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
-      override val customHandlers: Ref[Set[EventHandler]]                = handlers
-      override val config: Config                                        = cfg
+    } yield new VotbotEnv
+      with BaseEnv
+      with TestDatabaseProvider
+      with TestQuotesRepo
+      with TestChannelSettingsRepo
+      with TestChannelHandlersRepo {
+
+      override val customHandlers: Ref[Set[EventHandler]] = handlers
+      override val config: Config                         = cfg
 
       override val state: BotState.Service[Any] = new BotStateLive[Any] {
         override protected val state: Ref[State] = st
@@ -87,6 +94,7 @@ object Main extends App {
       }
 
       override val httpClient: HttpClient.Service[Any] = DefaultHttpClient
+
     }
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
@@ -99,8 +107,11 @@ object Main extends App {
     for {
       qsRepo <- ZIO.access[QuotesRepo](_.quotesRepo)
       csRepo <- ZIO.access[ChannelSettingsRepo](_.channelSettingsRepo)
+      chRepo <- ZIO.access[ChannelHandlersRepo](_.channelHandlersRepo)
       _ <- ZIO.when(args.contains("--initdb")) {
-            qsRepo.createSchemaIfNotExists *> csRepo.createSchemaIfNotExists
+            qsRepo.createSchemaIfNotExists *>
+              csRepo.createSchemaIfNotExists *>
+              chRepo.createSchemaIfNotExists
           }
       client <- client().fork
       clc    <- ConsoleControl.parse().fork

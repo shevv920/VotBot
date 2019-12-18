@@ -6,9 +6,7 @@ import zio.ZIO
 
 object ZioSlick {
 
-  type ZIOSlick[T] = ZIO[DatabaseProvider, Throwable, T]
-
-  def apply[T](action: DBIO[T]): ZIOSlick[T] =
+  def apply[T](action: DBIO[T]): ZIO[DatabaseProvider, Throwable, T] =
     for {
       db  <- ZIO.accessM[DatabaseProvider](_.databaseProvider.db)
       res <- ZIO.fromFuture(implicit ec => db.run(action))

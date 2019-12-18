@@ -5,6 +5,7 @@ import votbot.database.{
   ChannelSettingsRepo,
   DatabaseProvider,
   QuotesRepo,
+  TestChannelHandlersRepo,
   TestChannelSettingsRepo,
   TestDatabaseProvider,
   TestQuotesRepo
@@ -30,17 +31,16 @@ object Base {
     evtQ     <- Queue.unbounded[Event]
     chs      <- Ref.make(Map.empty[ChannelKey, Channel])
     users    <- Ref.make(Map.empty[UserKey, User])
-    handlers <- Ref.make(List.empty[EventHandler])
+    handlers <- Ref.make(Set.empty[EventHandler])
     st       <- Ref.make(State("votbot"))
   } yield new VotbotEnv
     with TestConfiguration
     with BaseEnv
     with TestDatabaseProvider
-    with ChannelSettingsRepo
-    with QuotesRepo
+    with TestChannelSettingsRepo
+    with TestChannelHandlersRepo
+    with TestQuotesRepo
     with Blocking.Live {
-    override val quotesRepo: QuotesRepo.Service[Any]                   = TestQuotesRepo
-    override val channelSettingsRepo: ChannelSettingsRepo.Service[Any] = TestChannelSettingsRepo
 
     override val api = new DefaultApi[Any] {
       override val parseQ: Queue[String]                        = inQ
@@ -50,7 +50,7 @@ object Base {
       override val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
       override val knownUsers: Ref[Map[UserKey, User]]          = users
     }
-    override val customHandlers: Ref[List[EventHandler]] = handlers
+    override val customHandlers: Ref[Set[EventHandler]] = handlers
 
     override val state: BotState.Service[Any] = new BotStateLive[Any] {
       override val state: Ref[State] = st
