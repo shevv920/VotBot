@@ -16,7 +16,7 @@ object Add extends SubCommand {
   override val cmdRegex: Regex = """(?i)add uri=(.*)\sselector=(.*) key=(\w{1,12})""".r
 
   override val description: String =
-    "Добавить цитаты из источника URI используя jsoup css selector и ключем KEY: add uri=URI selector=SELECTOR key=KEY"
+    "add quotes from uri using css selector with the key: add uri=URI selector=SELECTOR key=KEY"
 
   override def action(subCmd: String, isAdmin: Boolean): ZIO[HandlerEnv, Throwable, Option[String]] = subCmd match {
     case cmdRegex(uriStr, selector, key) if isAdmin =>

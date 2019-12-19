@@ -40,7 +40,7 @@ object Event {
 
   def ircToEvent(ircMsg: RawMessage): ZIO[BotState, Throwable, Event] =
     for {
-      state          <- ZIO.access[BotState](_.state)
+      state          <- ZIO.access[BotState](_.botState)
       currentNick    <- state.currentNick()
       isExtendedJoin <- state.isCapabilityEnabled(Capabilities.ExtendedJoin)
       event = ircMsg match {
@@ -139,7 +139,7 @@ object Event {
     for {
       api     <- ZIO.access[Api](_.api)
       evt     <- api.dequeueEvent()
-      handler <- ZIO.environment[BaseEventHandler]
+      handler <- ZIO.access[BaseEventHandler](_.baseEventHandler)
       _       <- putStrLn("Processing Event: " + evt.toString)
       _       <- handler.handle(evt)
     } yield ()

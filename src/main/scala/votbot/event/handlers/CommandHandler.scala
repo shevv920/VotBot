@@ -24,7 +24,7 @@ trait CommandHandler extends EventHandler {
 
   private def mkRegex: ZIO[BotState, Throwable, Regex] =
     for {
-      botNick  <- ZIO.accessM[BotState](_.state.currentNick())
+      botNick  <- ZIO.accessM[BotState](_.botState.currentNick())
       regexStr <- ZIO.effect("(?i)" + botNick + ".{1,2}" + commands.mkString("(", "|", ")") + "\\s?(.*)?")
       regex    <- ZIO.effect(regexStr.r)
     } yield regex

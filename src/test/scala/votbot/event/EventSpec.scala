@@ -39,7 +39,7 @@ object EventSpec {
       val prefix = Prefix("nick", "user", "host")
       val msg    = RawMessage(Command.Join, Vector("#votbot", "*", ""), Some(prefix))
       for {
-        _     <- ZIO.accessM[BotState](_.state.addCapabilities(Capabilities.ExtendedJoin))
+        _     <- ZIO.accessM[BotState](_.botState.addCapabilities(Capabilities.ExtendedJoin))
         event <- Event.ircToEvent(msg)
       } yield assert(event, equalTo(ExtendedJoin("nick", "#votbot", "*")))
     }

@@ -5,7 +5,7 @@ import votbot.model.irc.Capability
 import zio.{ Ref, Task, ZIO }
 
 trait BotState {
-  val state: BotState.Service[Any]
+  val botState: BotState.Service[Any]
 }
 
 object BotState {

@@ -15,7 +15,7 @@ object DatabaseProvider {
   }
 }
 
-trait TestDatabaseProvider extends DatabaseProvider {
+trait SqliteDatabaseProvider extends DatabaseProvider {
 
   override val databaseProvider: DatabaseProvider.Service[Any] = new DatabaseProvider.Service[Any] {
 

@@ -18,8 +18,7 @@ object Admin extends CommandHandler {
   ): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api     <- ZIO.access[Api](_.api)
-      cfg     <- ZIO.access[Configuration](_.config)
-      user    <- api.getUser(UserKey(sender))
+      cfg     <- ZIO.access[Configuration](_.configuration.config)
       userAcc <- api.getUserAccountName(UserKey(sender))
       isAdmin = cfg.admin.account.equalsIgnoreCase(userAcc)
       _ <- ZIO.when(isAdmin) {

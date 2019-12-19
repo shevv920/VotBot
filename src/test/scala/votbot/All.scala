@@ -5,13 +5,13 @@ import votbot.database.{
   ChannelSettingsRepo,
   DatabaseProvider,
   QuotesRepo,
-  TestChannelHandlersRepo,
-  TestChannelSettingsRepo,
-  TestDatabaseProvider,
-  TestQuotesRepo
+  SqliteChannelHandlersRepo,
+  SqliteChannelSettingsRepo,
+  SqliteDatabaseProvider,
+  SqliteQuotesRepo
 }
 import votbot.event.Event.Event
-import votbot.event.handlers.BaseEventHandler
+import votbot.event.handlers.{ BaseEventHandler, DefaultEventHandler }
 import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler, EventSpec }
 import votbot.model.Bot.State
 import votbot.model.irc.{ Channel, ChannelKey, RawMessage, User, UserKey }
@@ -36,10 +36,11 @@ object Base {
   } yield new VotbotEnv
     with TestConfiguration
     with BaseEnv
-    with TestDatabaseProvider
-    with TestChannelSettingsRepo
-    with TestChannelHandlersRepo
-    with TestQuotesRepo
+    with SqliteDatabaseProvider
+    with SqliteChannelSettingsRepo
+    with SqliteChannelHandlersRepo
+    with SqliteQuotesRepo
+    with DefaultEventHandler
     with Blocking.Live {
 
     override val api = new DefaultApi[Any] {
@@ -52,7 +53,7 @@ object Base {
     }
     override val customHandlers: Ref[Set[EventHandler]] = handlers
 
-    override val state: BotState.Service[Any] = new BotStateLive[Any] {
+    override val botState: BotState.Service[Any] = new BotStateLive[Any] {
       override val state: Ref[State] = st
     }
     override val httpClient: HttpClient.Service[Any] = DefaultHttpClient

@@ -27,7 +27,7 @@ object UltimateQuotes extends CommandHandler {
   ): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api       <- ZIO.access[Api](_.api)
-      cfg       <- ZIO.access[Configuration](_.config)
+      cfg       <- ZIO.access[Configuration](_.configuration.config)
       userAcc   <- api.getUserAccountName(UserKey(sender))
       isAdmin   = cfg.admin.account.equalsIgnoreCase(userAcc)
       responses <- ZIO.foreach(subCommands)(sc => sc.action(args, isAdmin)).map(_.filter(_.nonEmpty))
