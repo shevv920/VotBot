@@ -118,7 +118,7 @@ object Main extends App {
                 csRepo.createSchemaIfNotExists *>
                 chRepo.createSchemaIfNotExists
             }
-            .catchAll(dbe => ZIO.succeed(dbe.throwable))
+            .catchAll(dbe => ZIO.fail(dbe.throwable))
       client <- client().fork
       _      <- ConsoleControl.parse().fork
       _      <- client.await
