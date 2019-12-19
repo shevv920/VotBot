@@ -3,7 +3,7 @@ package votbot
 import java.nio.charset.StandardCharsets
 
 import model.irc.Command.Unknown
-import votbot.model.irc.{ Command, Prefix, RawMessage }
+import votbot.model.irc.{ Command, Message, Prefix }
 import zio.console._
 import zio.{ Task, UIO, ZIO }
 
@@ -18,7 +18,7 @@ object MsgParser {
   val hostPrefix: Regex          = """:(.*) """.r
   val numericCommandRegex: Regex = """(\d{3})""".r
 
-  def parse(raw: String): Task[RawMessage] =
+  def parse(raw: String): Task[Message] =
     ZIO.effect {
       val (prefix, commandParams) =
         if (raw.startsWith(":"))
@@ -33,7 +33,7 @@ object MsgParser {
           case _                      => Command.withNameOption(command.toUpperCase).getOrElse(Unknown(command))
         }
 
-      RawMessage(cmd, parseParams(params.trim), parsePrefix(prefix))
+      Message(cmd, parseParams(params.trim), parsePrefix(prefix))
     }
 
   private def parsePrefix(prefix: String): Option[Prefix] = prefix match {
@@ -58,13 +58,13 @@ object MsgParser {
   def parser(): ZIO[Api with Console, Throwable, Unit] =
     for {
       api        <- ZIO.access[Api](_.api)
-      raw        <- api.dequeueParse()
+      raw        <- api.dequeueReceived()
       _          <- putStrLn("got to parse: " + raw)
       ircMessage <- parse(raw)
-      _          <- api.enqueueProcess(ircMessage)
+      _          <- api.enqueueParsed(ircMessage)
     } yield ()
 
-  def msgToByteArray(msg: RawMessage): UIO[Array[Byte]] =
+  def msgToByteArray(msg: Message): UIO[Array[Byte]] =
     ZIO.effectTotal {
       val str =
         msg.cmd.entryName.toUpperCase() +

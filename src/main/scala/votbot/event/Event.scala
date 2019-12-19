@@ -35,18 +35,18 @@ object Event {
   final case class UserLoggedIn(nick: String, accountName: String)                          extends Event
   final case class UserLoggedOut(nick: String)                                              extends Event
   final case class NickChanged(oldNick: String, newNick: String)                            extends Event
-  final case class Unknown(raw: RawMessage)                                                 extends Event
+  final case class Unknown(raw: Message)                                                    extends Event
   final case class Connected(remote: SocketAddress)                                         extends Event
 
-  def ircToEvent(ircMsg: RawMessage): ZIO[BotState, Throwable, Event] =
+  def ircToEvent(ircMsg: Message): ZIO[BotState, Throwable, Event] =
     for {
       state          <- ZIO.access[BotState](_.botState)
       currentNick    <- state.currentNick()
       isExtendedJoin <- state.isCapabilityEnabled(Capabilities.ExtendedJoin)
       event = ircMsg match {
-        case RawMessage(Command.Ping, args, _) =>
+        case Message(Command.Ping, args, _) =>
           Ping(args.headOption)
-        case RawMessage(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(currentNick) =>
+        case Message(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(currentNick) =>
           if (args.last.startsWith("\u0001")) {
             val special = args.last.drop(1).takeWhile(_ != ' ')
             val msg     = args.last.drop(1 + special.length)
@@ -60,9 +60,9 @@ object Event {
             else
               PrivateMessage(prefix.nick, args.last)
           }
-        case RawMessage(Command.Numeric(NumericCommand.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
+        case Message(Command.Numeric(NumericCommand.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
           Welcome(args.head, prefix.host)
-        case RawMessage(Command.Numeric(NumericCommand.RPL_NAMREPLY), args, _) =>
+        case Message(Command.Numeric(NumericCommand.RPL_NAMREPLY), args, _) =>
           val channel = args(2)
           val members = args.last
             .split(" ")
@@ -76,22 +76,22 @@ object Event {
             }
             .toList
           NamesList(channel, members)
-        case rm @ RawMessage(Command.Join, _, _) =>
+        case rm @ Message(Command.Join, _, _) =>
           parseJoin(currentNick, isExtendedJoin, rm)
-        case RawMessage(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
+        case Message(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
           BotPart(channel.mkString(", "))
-        case RawMessage(Command.Part, args, Some(prefix)) if args.size > 1 =>
+        case Message(Command.Part, args, Some(prefix)) if args.size > 1 =>
           Part(prefix.nick, args.dropRight(1).mkString(", "), args.last) //last - reason
-        case RawMessage(Command.Part, args, Some(prefix)) =>
+        case Message(Command.Part, args, Some(prefix)) =>
           Part(prefix.nick, args.mkString(", "), prefix.nick)
-        case RawMessage(Command.Notice, args, Some(prefix)) =>
+        case Message(Command.Notice, args, Some(prefix)) =>
           if (args.head.startsWith("#"))
             ChannelNotice(prefix.nick, args.head, args.last)
           else
             Notice(prefix.nick, args.last)
-        case RawMessage(Command.Quit, args, Some(prefix)) =>
+        case Message(Command.Quit, args, Some(prefix)) =>
           Quit(prefix.nick, args.mkString)
-        case RawMessage(Command.Cap, args, _) if args.size == 3 =>
+        case Message(Command.Cap, args, _) if args.size == 3 =>
           val subCmd = args(1)
           val caps   = args(2).split(" ").toList
           subCmd.toUpperCase match {
@@ -102,34 +102,34 @@ object Event {
             case "NAK" =>
               CapabilityNak(caps)
           }
-        case RawMessage(Command.Account, args, Some(prefix)) if args.nonEmpty =>
+        case Message(Command.Account, args, Some(prefix)) if args.nonEmpty =>
           args.head match {
             case "*" =>
               UserLoggedOut(prefix.nick)
             case accName =>
               UserLoggedIn(prefix.nick, accName)
           }
-        case RawMessage(Command.Nick, args, Some(prefix)) if args.nonEmpty =>
+        case Message(Command.Nick, args, Some(prefix)) if args.nonEmpty =>
           NickChanged(prefix.nick, args.head)
-        case RawMessage(Command.Numeric(NumericCommand.RPL_WHOREPLYX), args, Some(prefix)) =>
+        case Message(Command.Numeric(NumericCommand.RPL_WHOREPLYX), args, Some(prefix)) =>
           args match {
             case Vector(_, targetNick, targetAcc) if targetAcc != "0" =>
               UserLoggedIn(targetNick, targetAcc)
             case _ => Unknown(ircMsg)
           }
-        case RawMessage(Command.Numeric(cmd), args, Some(prefix)) =>
+        case Message(Command.Numeric(cmd), args, Some(prefix)) =>
           Numeric(cmd, args, prefix)
         case _ => Unknown(ircMsg)
       }
     } yield event
 
-  private def parseJoin(botNick: String, isExtended: Boolean, message: RawMessage): Event =
+  private def parseJoin(botNick: String, isExtended: Boolean, message: Message): Event =
     message match {
-      case RawMessage(Command.Join, args, Some(prefix)) if prefix.nick.equalsIgnoreCase(botNick) =>
+      case Message(Command.Join, args, Some(prefix)) if prefix.nick.equalsIgnoreCase(botNick) =>
         BotJoin(args.head)
-      case RawMessage(Command.Join, args, Some(prefix)) if !isExtended =>
+      case Message(Command.Join, args, Some(prefix)) if !isExtended =>
         Join(prefix.nick, args.head)
-      case RawMessage(Command.Join, args, Some(prefix)) if args.size > 1 =>
+      case Message(Command.Join, args, Some(prefix)) if args.size > 1 =>
         val channel     = args.head
         val accountName = args.tail.head
         ExtendedJoin(prefix.nick, channel, accountName)

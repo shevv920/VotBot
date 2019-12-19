@@ -54,7 +54,7 @@ object Client {
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _            <- ZIO.accessM[Api](_.api.enqueueParse(valid: _*))
+      _            <- ZIO.accessM[Api](_.api.enqueueReceived(valid: _*))
       _            <- reader(channel, rem.mkString(""))
     } yield ()
 

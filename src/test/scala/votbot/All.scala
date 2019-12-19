@@ -14,7 +14,7 @@ import votbot.event.Event.Event
 import votbot.event.handlers.{ BaseEventHandler, DefaultEventHandler }
 import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler, EventSpec }
 import votbot.model.Bot.State
-import votbot.model.irc.{ Channel, ChannelKey, RawMessage, User, UserKey }
+import votbot.model.irc.{ Channel, ChannelKey, Message, User, UserKey }
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console._
@@ -26,8 +26,8 @@ object Base {
 
   val env = for {
     inQ      <- Queue.unbounded[String]
-    outQ     <- Queue.unbounded[RawMessage]
-    pQ       <- Queue.unbounded[RawMessage]
+    outQ     <- Queue.unbounded[Message]
+    pQ       <- Queue.unbounded[Message]
     evtQ     <- Queue.unbounded[Event]
     chs      <- Ref.make(Map.empty[ChannelKey, Channel])
     users    <- Ref.make(Map.empty[UserKey, User])
@@ -44,9 +44,9 @@ object Base {
     with Blocking.Live {
 
     override val api = new DefaultApi[Any] {
-      override val parseQ: Queue[String]                        = inQ
-      override val processQ: Queue[RawMessage]                  = pQ
-      override val outMessageQ: Queue[RawMessage]               = outQ
+      override val receivedQ: Queue[String]                     = inQ
+      override val parsedMessageQ: Queue[Message]               = pQ
+      override val outMessageQ: Queue[Message]                  = outQ
       override val eventQ: Queue[Event.Event]                   = evtQ
       override val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
       override val knownUsers: Ref[Map[UserKey, User]]          = users

@@ -61,8 +61,8 @@ object Main extends App {
               .orElse(ZIO.fromEither(ConfigSource.default.load[Config]))
       st       <- Ref.make(State(cfg.bot.nick))
       inQ      <- Queue.unbounded[String]
-      outQ     <- Queue.unbounded[RawMessage]
-      pQ       <- Queue.unbounded[RawMessage]
+      outQ     <- Queue.unbounded[Message]
+      pQ       <- Queue.unbounded[Message]
       evtQ     <- Queue.unbounded[Event]
       chs      <- Ref.make(Map.empty[ChannelKey, Channel])
       handlers <- Ref.make(Set[EventHandler](Help, UltimateQuotes))
@@ -86,9 +86,9 @@ object Main extends App {
       }
 
       override val api: Api.Service[Any] = new DefaultApi[Any] {
-        override protected val parseQ: Queue[String]                        = inQ
-        override protected val processQ: Queue[RawMessage]                  = pQ
-        override protected val outMessageQ: Queue[RawMessage]               = outQ
+        override protected val receivedQ: Queue[String]                     = inQ
+        override protected val parsedMessageQ: Queue[Message]               = pQ
+        override protected val outMessageQ: Queue[Message]                  = outQ
         override protected val eventQ: Queue[Event]                         = evtQ
         override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
         override protected val knownUsers: Ref[Map[UserKey, User]]          = users
@@ -124,7 +124,7 @@ object Main extends App {
   def processor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
       api <- ZIO.access[Api](_.api)
-      msg <- api.dequeueProcess()
+      msg <- api.dequeueParsedMessage()
       _   <- putStrLn("Processing IRC Message: " + msg.toString)
       evt <- Event.ircToEvent(msg)
       _   <- api.enqueueEvent(evt)

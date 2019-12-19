@@ -2,7 +2,7 @@ package votbot.event
 import votbot.{ Api, BotState }
 import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
-import votbot.model.irc.{ Capabilities, Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey }
+import votbot.model.irc.{ Capabilities, Channel, ChannelKey, ChannelMode, Command, Message, UserKey }
 import zio.ZIO
 import zio.nio.SocketAddress
 import zio.test.Assertion._
@@ -22,8 +22,8 @@ object BaseEventHandlerSpec {
         _           <- handler.handle(evtWithArgs)
         pongNoArgs  <- api.dequeueOutMessage()
         pongArgs    <- api.dequeueOutMessage()
-      } yield assert(pongNoArgs, equalTo(RawMessage(Command.Pong))) &&
-        assert(pongArgs, equalTo(RawMessage(Command.Pong, Vector(args))))
+      } yield assert(pongNoArgs, equalTo(Message(Command.Pong))) &&
+        assert(pongArgs, equalTo(Message(Command.Pong, Vector(args))))
     },
     testM("send nick and user commands on Connected Event") {
       for {

@@ -1,13 +1,12 @@
 package votbot.model.irc
 
-sealed trait Message
-final case class RawMessage(cmd: Command, args: Vector[String], prefix: Option[Prefix] = None) extends Message
+final case class Message(cmd: Command, args: Vector[String], prefix: Option[Prefix] = None)
 
-object RawMessage {
+object Message {
 
-  def apply(cmd: Command, args: String*): RawMessage =
-    if (args.size > 1)
-      new RawMessage(cmd, args.toVector.updated(args.size - 1, ":" + args.last), None)
+  def apply(cmd: Command, args: String*): Message =
+    if (args.size > 1) //always add ":" to last param if many
+      new Message(cmd, args.toVector.updated(args.size - 1, ":" + args.last), None)
     else
-      new RawMessage(cmd, args.toVector, None)
+      new Message(cmd, args.toVector, None)
 }

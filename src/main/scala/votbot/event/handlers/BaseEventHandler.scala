@@ -38,22 +38,22 @@ trait DefaultEventHandler extends BaseEventHandler {
       for {
         _ <- ZIO.whenCase(event) {
               case Ping(Some(args)) =>
-                api.enqueueOutMessage(RawMessage(Command.Pong, args))
+                api.enqueueOutMessage(Message(Command.Pong, args))
               case Ping(None) =>
-                api.enqueueOutMessage(RawMessage(Command.Pong))
+                api.enqueueOutMessage(Message(Command.Pong))
               case Numeric(NumericCommand.RPL_YOURHOST, _, prefix) =>
                 ZIO.unit
               case Numeric(NumericCommand.ERR_NICKNAMEINUSE, _, prefix) =>
                 for {
                   n       <- random.nextInt(99)
                   newNick = configuration.config.bot.nick + n
-                  _       <- api.enqueueOutMessage(RawMessage(Command.Nick, newNick))
+                  _       <- api.enqueueOutMessage(Message(Command.Nick, newNick))
                   _       <- botState.setNick(newNick)
                 } yield ()
               case Connected(remote) =>
-                val capLsCmd = RawMessage(Command.CapLs)
-                val nickCmd  = RawMessage(Command.Nick, configuration.config.bot.nick)
-                val userCmd = RawMessage(
+                val capLsCmd = Message(Command.CapLs)
+                val nickCmd  = Message(Command.Nick, configuration.config.bot.nick)
+                val userCmd = Message(
                   Command.User,
                   configuration.config.bot.userName,
                   "*",
@@ -65,8 +65,8 @@ trait DefaultEventHandler extends BaseEventHandler {
                 val capsFromCfg          = configuration.config.server.capRequire.getOrElse(List.empty).map(_.toLowerCase)
                 val supportedAndRequired = capsFromCfg.intersect(supportedCaps.map(_.toLowerCase))
                 val capReqCmd =
-                  RawMessage(Command.CapReq, ":" + supportedAndRequired.mkString(" "))
-                val capEnd = RawMessage(Command.CapEnd)
+                  Message(Command.CapReq, ":" + supportedAndRequired.mkString(" "))
+                val capEnd = Message(Command.CapEnd)
                 api.enqueueOutMessage(capReqCmd, capEnd)
               case CapabilityAck(caps) =>
                 val capsSupported = caps
@@ -81,7 +81,7 @@ trait DefaultEventHandler extends BaseEventHandler {
                   .map(_.get)
                 botState.removeCapabilities(capsToRemove: _*)
               case Welcome(nick, host) =>
-                val joinCmd = RawMessage(Command.Join, configuration.config.bot.autoJoinChannels.mkString(","))
+                val joinCmd = Message(Command.Join, configuration.config.bot.autoJoinChannels.mkString(","))
                 api
                   .enqueueOutMessage(joinCmd)
                   .flatMap(_ => botState.setNick(nick))
