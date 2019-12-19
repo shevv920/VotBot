@@ -12,13 +12,10 @@ import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.{ Console, _ }
-import zio.nio.{ InetSocketAddress, SocketAddress }
-import zio.nio.channels.AsynchronousSocketChannel
 import zio.random.Random
 import zio.system
 import pureconfig._
 import pureconfig.generic.auto._
-import zio.duration._
 import votbot.database.{
   ChannelHandlersRepo,
   ChannelSettingsRepo,
@@ -119,66 +116,9 @@ object Main extends App {
                 chRepo.createSchemaIfNotExists
             }
             .catchAll(dbe => ZIO.fail(dbe.throwable))
-      client <- client().fork
-      _      <- ConsoleControl.parse().fork
-      _      <- client.await
-    } yield ()
-
-  def client(): ZIO[VotbotEnv, Exception, Unit] =
-    for {
-      config <- ZIO.access[Configuration](_.configuration.config)
-      _ <- AsynchronousSocketChannel()
-            .use { channel =>
-              for {
-                addr <- SocketAddress.inetSocketAddress(config.server.address, config.server.port)
-                _    <- putStrLn("connecting to: " + addr.toString())
-                _    <- connection(channel, addr)
-              } yield ()
-            }
-            .onError(e => putStrLn(e.untraced.prettyPrint))
-            .retry(Schedule.spaced(5.seconds))
-            .fork
-      parser       <- MsgParser.parser().forever.fork
-      processor    <- processor().forever.fork
-      evtProcessor <- Event.eventProcessor().forever.fork
-      _            <- parser.zip(processor).await
-      _            <- evtProcessor.await
-    } yield ()
-
-  def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[VotbotEnv, Exception, Unit] =
-    for {
-      _      <- channel.connect(addr)
-      _      <- ZIO.accessM[Api](_.api.enqueueEvent(Connected))
-      reader <- reader(channel).fork
-      writer <- writer(channel).fork
-      _      <- reader.zip(writer).await
-    } yield ()
-
-  def reader(
-    channel: AsynchronousSocketChannel,
-    rem: String = ""
-  ): ZIO[VotbotEnv, Throwable, Unit] =
-    for {
-      chunk        <- channel.read(maxMessageLength)
-      str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
-      res          <- split(str)
-      (valid, rem) = res
-      _            <- ZIO.accessM[Api](_.api.enqueueParse(valid: _*))
-      _            <- reader(channel, rem.mkString(""))
-    } yield ()
-
-  private def split(str: String): Task[(Array[String], Array[String])] =
-    ZIO.effect(str.split("(?<=\r\n)").filter(_.nonEmpty).span(_.endsWith("\r\n")))
-
-  def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Throwable, Unit] =
-    for {
-      msg      <- ZIO.accessM[Api](_.api.dequeueOutMessage())
-      msgBytes <- MsgParser.msgToByteArray(msg)
-      chunk    = Chunk.fromArray(msgBytes)
-      remN     <- channel.write(rem ++ chunk)
-      rem      = chunk.drop(remN)
-      _        <- putStrLn("Written: " + new String(msgBytes, StandardCharsets.UTF_8) + " remaining: " + rem.length)
-      _        <- writer(channel, rem)
+      client         <- Client().fork
+      consoleControl <- ConsoleControl().fork
+      _              <- client.await
     } yield ()
 
   def processor(): ZIO[VotbotEnv, Throwable, Unit] =

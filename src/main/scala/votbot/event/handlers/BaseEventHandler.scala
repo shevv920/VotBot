@@ -50,7 +50,7 @@ trait DefaultEventHandler extends BaseEventHandler {
                   _       <- api.enqueueOutMessage(RawMessage(Command.Nick, newNick))
                   _       <- botState.setNick(newNick)
                 } yield ()
-              case Connected =>
+              case Connected(remote) =>
                 val capLsCmd = RawMessage(Command.CapLs)
                 val nickCmd  = RawMessage(Command.Nick, configuration.config.bot.nick)
                 val userCmd = RawMessage(

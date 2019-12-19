@@ -4,6 +4,7 @@ import votbot.event.Event._
 import votbot.event.handlers.BaseEventHandler
 import votbot.model.irc.{ Capabilities, Channel, ChannelKey, ChannelMode, Command, RawMessage, UserKey }
 import zio.ZIO
+import zio.nio.SocketAddress
 import zio.test.Assertion._
 import zio.test._
 
@@ -28,7 +29,8 @@ object BaseEventHandlerSpec {
       for {
         api     <- ZIO.access[Api](_.api)
         handler <- ZIO.access[BaseEventHandler](_.baseEventHandler)
-        _       <- handler.handle(Connected)
+        addr    <- SocketAddress.inetSocketAddress(1234)
+        _       <- handler.handle(Connected(addr))
         all     <- api.dequeueAllOutMessages()
       } yield assert(all.count(c => c.cmd == Command.Nick || c.cmd == Command.User), equalTo(2))
     },

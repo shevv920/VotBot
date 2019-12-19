@@ -6,7 +6,7 @@ import zio.console._
 
 object ConsoleControl {
 
-  def parse(): ZIO[Console with Api, Throwable, Unit] =
+  def apply(): ZIO[Console with Api, Throwable, Unit] =
     for {
       api <- ZIO.access[Api](_.api)
       cmd <- getStrLn.map(_.split("\\s")).map(_.toList)
@@ -16,6 +16,6 @@ object ConsoleControl {
             case "join" :: value :: _ =>
               putStrLn(s"got join $value command") *> api.joinChannel(value)
           }
-      _ <- parse()
+      _ <- apply()
     } yield ()
 }

@@ -6,6 +6,7 @@ import votbot.model.irc._
 import votbot.{ Api, BotState }
 import zio.ZIO
 import zio.console.putStrLn
+import zio.nio.SocketAddress
 
 object Event {
   sealed trait Event
@@ -35,8 +36,7 @@ object Event {
   final case class UserLoggedOut(nick: String)                                              extends Event
   final case class NickChanged(oldNick: String, newNick: String)                            extends Event
   final case class Unknown(raw: RawMessage)                                                 extends Event
-
-  final case object Connected extends Event
+  final case class Connected(remote: SocketAddress)                                         extends Event
 
   def ircToEvent(ircMsg: RawMessage): ZIO[BotState, Throwable, Event] =
     for {
