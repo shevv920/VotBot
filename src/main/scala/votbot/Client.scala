@@ -2,18 +2,18 @@ package votbot
 
 import java.nio.charset.StandardCharsets
 
-import votbot.Main.{ VotbotEnv, maxMessageLength, processor }
-import votbot.event.Event
+import votbot.Main.VotbotEnv
 import votbot.event.Event.Connected
-import zio.{ Chunk, Schedule, Task, ZIO }
-import zio.duration._
 import zio.console.putStrLn
-import zio.nio.{ InetSocketAddress, SocketAddress }
+import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
+import zio.nio.{ InetSocketAddress, SocketAddress }
+import zio.{ Chunk, Schedule, Task, ZIO }
 
 object Client {
+  val maxMessageLength = 512
 
-  def apply(): ZIO[VotbotEnv, Exception, Unit] =
+  def make(): ZIO[VotbotEnv, Exception, Unit] =
     for {
       config <- ZIO.access[Configuration](_.configuration.config)
       _ <- AsynchronousSocketChannel()
@@ -25,12 +25,6 @@ object Client {
             }
             .onError(e => putStrLn(e.untraced.prettyPrint))
             .retry(Schedule.spaced(5.seconds))
-            .fork
-      parser       <- MsgParser.parser().forever.fork
-      processor    <- processor().forever.fork
-      evtProcessor <- Event.eventProcessor().forever.fork
-      _            <- parser.zip(processor).await
-      _            <- evtProcessor.await
     } yield ()
 
   def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[VotbotEnv, Exception, Unit] =

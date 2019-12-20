@@ -59,7 +59,7 @@ object MsgParser {
     for {
       api        <- ZIO.access[Api](_.api)
       raw        <- api.dequeueReceived()
-      _          <- putStrLn("got to parse: " + raw)
+      _          <- putStrLn("Got to parse: " + raw)
       ircMessage <- parse(raw)
       _          <- api.enqueueParsed(ircMessage)
     } yield ()

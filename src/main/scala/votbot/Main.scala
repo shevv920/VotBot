@@ -29,7 +29,7 @@ import votbot.database.{
 import votbot.event.handlers.ultimatequotes.UltimateQuotes
 
 object Main extends App {
-  val maxMessageLength = 512
+
   trait BaseEnv extends Console.Live with Clock.Live with Random.Live with Blocking.Live
 
   trait VotbotEnv
@@ -73,7 +73,8 @@ object Main extends App {
       with SqliteDatabaseProvider
       with SqliteQuotesRepo
       with SqliteChannelSettingsRepo
-      with SqliteChannelHandlersRepo {
+      with SqliteChannelHandlersRepo
+      with DefaultHttpClient {
 
       override val customHandlers: Ref[Set[EventHandler]] = handlers
 
@@ -93,9 +94,6 @@ object Main extends App {
         override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
         override protected val knownUsers: Ref[Map[UserKey, User]]          = users
       }
-
-      override val httpClient: HttpClient.Service[Any] = DefaultHttpClient
-
     }
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
@@ -116,12 +114,17 @@ object Main extends App {
                 chRepo.createSchemaIfNotExists
             }
             .catchAll(dbe => ZIO.fail(dbe.throwable))
-      client         <- Client().fork
+      client         <- Client.make().fork
+      parser         <- MsgParser.parser().forever.fork
+      processor      <- processor().forever.fork
+      evtProcessor   <- Event.eventProcessor().forever.fork
+      _              <- parser.zip(processor).await
+      _              <- evtProcessor.await
       consoleControl <- ConsoleControl().fork
       _              <- client.await
     } yield ()
 
-  def processor(): ZIO[VotbotEnv, Throwable, Unit] =
+  def processor(): ZIO[Api with BotState with Console, Throwable, Unit] =
     for {
       api <- ZIO.access[Api](_.api)
       msg <- api.dequeueParsedMessage()

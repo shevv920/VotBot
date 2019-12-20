@@ -1,8 +1,9 @@
 package votbot
 
-case class Config(debug: Boolean, server: Server, bot: BotProps, admin: Admin)
+case class Config(debug: Boolean, server: Server, bot: BotProps, admin: Admin, http: Http)
 case class Server(address: String, port: Int, capRequire: Option[List[String]])
 case class Admin(account: String)
+case class Http(quickRequestTimeout: Int)
 
 case class BotProps(
   nick: String,
@@ -29,6 +30,7 @@ trait TestConfiguration extends Configuration {
     val server   = Server("irc.freenode.net", 6667, None)
     val botProps = BotProps("votbot", "uname", "realName", List("#votbot"), "VOTBOT")
     val admin    = Admin("norm_nick")
-    val config   = Config(debug = true, server, botProps, admin)
+    val http     = Http(7)
+    val config   = Config(debug = true, server, botProps, admin, http)
   }
 }
