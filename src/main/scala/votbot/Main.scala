@@ -1,6 +1,5 @@
 package votbot
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import votbot.event.Event._

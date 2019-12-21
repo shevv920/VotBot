@@ -21,16 +21,23 @@ object Configuration {
 
   trait Service[R] {
     val config: Config
+    val http: Http     = config.http
+    val server: Server = config.server
+    val admin: Admin   = config.admin
+    val bot: BotProps  = config.bot
   }
 }
 
 trait TestConfiguration extends Configuration {
 
   override val configuration = new Configuration.Service[Any] {
-    val server   = Server("irc.freenode.net", 6667, None)
-    val botProps = BotProps("votbot", "uname", "realName", List("#votbot"), "VOTBOT")
-    val admin    = Admin("norm_nick")
-    val http     = Http(7)
-    val config   = Config(debug = true, server, botProps, admin, http)
+
+    val config = Config(
+      debug = true,
+      Server("irc.freenode.net", 6667, None),
+      BotProps("votbot", "uname", "realName", List("#votbot"), "VOTBOT"),
+      Admin("norm_nick"),
+      Http(7)
+    )
   }
 }

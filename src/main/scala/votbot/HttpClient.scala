@@ -2,10 +2,10 @@ package votbot
 
 import sttp.client.{ SttpBackend, _ }
 import sttp.model.Uri
-import zio.{ Task, ZIO }
-import zio.duration._
+import zio.ZIO
 import zio.blocking._
 import zio.clock.Clock
+import zio.duration._
 
 trait HttpClient {
   val httpClient: HttpClient.Service[Any]
@@ -22,12 +22,14 @@ trait DefaultHttpClient extends HttpClient {
   val configuration: Configuration.Service[Any]
 
   override val httpClient: HttpClient.Service[Any] = new HttpClient.Service[Any] {
-    implicit val sttpBackend = HttpURLConnectionBackend()
+    implicit val sttpBackend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     override def quick(uri: Uri): ZIO[Blocking with Clock, Throwable, Identity[Response[String]]] =
       effectBlocking {
         val r = quickRequest.get(uri)
         r.send()
-      }.timeoutFail(new Exception("timeout"))(configuration.config.http.quickRequestTimeout.seconds)
+      }.timeoutFail(new Exception("timeout " + configuration.http.quickRequestTimeout + " seconds"))(
+        configuration.http.quickRequestTimeout.seconds
+      )
   }
 }

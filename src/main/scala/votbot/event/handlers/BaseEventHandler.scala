@@ -46,23 +46,23 @@ trait DefaultEventHandler extends BaseEventHandler {
               case Numeric(NumericCommand.ERR_NICKNAMEINUSE, _, prefix) =>
                 for {
                   n       <- random.nextInt(99)
-                  newNick = configuration.config.bot.nick + n
+                  newNick = configuration.bot.nick + n
                   _       <- api.enqueueOutMessage(Message(Command.Nick, newNick))
                   _       <- botState.setNick(newNick)
                 } yield ()
               case Connected(remote) =>
                 val capLsCmd = Message(Command.CapLs)
-                val nickCmd  = Message(Command.Nick, configuration.config.bot.nick)
+                val nickCmd  = Message(Command.Nick, configuration.bot.nick)
                 val userCmd = Message(
                   Command.User,
-                  configuration.config.bot.userName,
+                  configuration.bot.userName,
                   "*",
                   "*",
-                  configuration.config.bot.realName
+                  configuration.bot.realName
                 )
                 api.enqueueOutMessage(capLsCmd, nickCmd, userCmd)
               case CapabilityList(supportedCaps) =>
-                val capsFromCfg          = configuration.config.server.capRequire.getOrElse(List.empty).map(_.toLowerCase)
+                val capsFromCfg          = configuration.server.capRequire.getOrElse(List.empty).map(_.toLowerCase)
                 val supportedAndRequired = capsFromCfg.intersect(supportedCaps.map(_.toLowerCase))
                 val capReqCmd =
                   Message(Command.CapReq, ":" + supportedAndRequired.mkString(" "))
@@ -81,7 +81,7 @@ trait DefaultEventHandler extends BaseEventHandler {
                   .map(_.get)
                 botState.removeCapabilities(capsToRemove: _*)
               case Welcome(nick, host) =>
-                val joinCmd = Message(Command.Join, configuration.config.bot.autoJoinChannels.mkString(","))
+                val joinCmd = Message(Command.Join, configuration.bot.autoJoinChannels.mkString(","))
                 api
                   .enqueueOutMessage(joinCmd)
                   .flatMap(_ => botState.setNick(nick))

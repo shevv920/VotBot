@@ -41,6 +41,7 @@ object Base {
     with SqliteChannelHandlersRepo
     with SqliteQuotesRepo
     with DefaultEventHandler
+    with DefaultHttpClient
     with Blocking.Live {
 
     override val api = new DefaultApi[Any] {
@@ -56,7 +57,6 @@ object Base {
     override val botState: BotState.Service[Any] = new BotStateLive[Any] {
       override val state: Ref[State] = st
     }
-    override val httpClient: HttpClient.Service[Any] = DefaultHttpClient
   }
 
   val envM = env.toManaged_
