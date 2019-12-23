@@ -1,11 +1,9 @@
 package votbot
 
-import java.nio.charset.StandardCharsets
-
-import model.irc.Command.Unknown
+import votbot.model.irc.Command.Unknown
 import votbot.model.irc.{ Command, Message, Prefix }
 import zio.console._
-import zio.{ Task, UIO, ZIO }
+import zio.{ Task, ZIO }
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -64,13 +62,4 @@ object MsgParser {
       _          <- api.enqueueParsed(ircMessage)
     } yield ()
 
-  def msgToByteArray(msg: Message): UIO[Array[Byte]] =
-    ZIO.effectTotal {
-      val str =
-        msg.cmd.entryName.toUpperCase() +
-          separator +
-          msg.args.mkString(separator) +
-          messageDelimiter
-      str.getBytes(StandardCharsets.UTF_8)
-    }
 }

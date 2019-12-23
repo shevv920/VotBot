@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import votbot.Main.VotbotEnv
 import votbot.event.Event.Connected
+import votbot.model.irc.Message
 import zio.console.putStrLn
 import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
@@ -58,7 +59,7 @@ object Client {
   def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Throwable, Unit] =
     for {
       msg      <- ZIO.accessM[Api](_.api.dequeueOutMessage())
-      msgBytes <- MsgParser.msgToByteArray(msg)
+      msgBytes <- Message.toByteArray(msg)
       chunk    = Chunk.fromArray(msgBytes)
       remN     <- channel.write(rem ++ chunk)
       rem      = chunk.drop(remN)
