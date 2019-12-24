@@ -79,6 +79,10 @@ object Main extends App {
 
       override val configuration: Configuration.Service[Any] = new Configuration.Service[Any] {
         override val config: Config = cfg
+        override val http: Http     = cfg.http
+        override val server: Server = cfg.server
+        override val admin: Admin   = cfg.admin
+        override val bot: BotProps  = cfg.bot
       }
 
       override val botState: BotState.Service[Any] = new BotStateLive[Any] {

@@ -21,10 +21,10 @@ object Configuration {
 
   trait Service[R] {
     val config: Config
-    val http: Http     = config.http
-    val server: Server = config.server
-    val admin: Admin   = config.admin
-    val bot: BotProps  = config.bot
+    val http: Http
+    val server: Server
+    val admin: Admin
+    val bot: BotProps
   }
 }
 
@@ -39,5 +39,11 @@ trait TestConfiguration extends Configuration {
       Admin("norm_nick"),
       Http(7)
     )
+
+    val http: Http     = config.http
+    val server: Server = config.server
+    val admin: Admin   = config.admin
+    val bot: BotProps  = config.bot
+
   }
 }
