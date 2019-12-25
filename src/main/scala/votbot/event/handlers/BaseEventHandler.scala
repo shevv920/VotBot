@@ -50,10 +50,11 @@ trait DefaultEventHandler extends BaseEventHandler {
       onQuit,
       onUserLoggedIn,
       onUserLoggedOut
-    ).foldLeft(onConnected)(_.orElse(_))
+    )
+    private val handleFunction = handlerFunctions.tail.foldLeft(handlerFunctions.head)(_.orElse(_))
 
     override def handle(event: Event): ZIO[Any, Throwable, Unit] =
-      ZIO.whenCase(event)(handlerFunctions)
+      ZIO.whenCase(event)(handleFunction)
 
     override def onPing: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
       case Ping(Some(args)) =>
