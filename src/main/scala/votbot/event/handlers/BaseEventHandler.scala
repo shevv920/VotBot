@@ -8,7 +8,7 @@ import zio.{ Ref, ZIO }
 
 trait BaseEventHandler {
   val baseEventHandler: BaseEventHandler.Service[Any]
-  val customHandlers: Ref[Set[EventHandler]]
+  val customHandlers: Ref[Set[EventHandler[Event]]]
 }
 
 object BaseEventHandler {
@@ -40,6 +40,7 @@ trait DefaultEventHandler extends BaseEventHandler {
 
     private val handlerFunctions = List(
       onWelcome,
+      onConnected,
       onPing,
       onCap,
       onJoin,
@@ -64,7 +65,7 @@ trait DefaultEventHandler extends BaseEventHandler {
     }
 
     override def onConnected: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
-      case Connected(remote) =>
+      case Connected(_) =>
         val capLsCmd = Message(Command.CapLs)
         val nickCmd  = Message(Command.Nick, configuration.bot.nick)
         val userCmd = Message(

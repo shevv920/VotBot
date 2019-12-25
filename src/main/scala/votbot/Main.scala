@@ -64,7 +64,7 @@ object Main extends App {
       pQ       <- Queue.unbounded[Message]
       evtQ     <- Queue.unbounded[Event]
       chs      <- Ref.make(Map.empty[ChannelKey, Channel])
-      handlers <- Ref.make(Set[EventHandler](Help, UltimateQuotes))
+      handlers <- Ref.make(Set[EventHandler[Event]](Help, UltimateQuotes))
       users    <- Ref.make(Map.empty[UserKey, User])
     } yield new VotbotEnv
       with BaseEnv
@@ -75,7 +75,7 @@ object Main extends App {
       with SqliteChannelHandlersRepo
       with DefaultHttpClient {
 
-      override val customHandlers: Ref[Set[EventHandler]] = handlers
+      override val customHandlers: Ref[Set[EventHandler[Event]]] = handlers
 
       override val configuration: Configuration.Service[Any] = new Configuration.Service[Any] {
         override val config: Config = cfg

@@ -1,19 +1,19 @@
 package votbot.event.handlers
 import votbot.BotState
-import votbot.event.Event.{ ChannelMessage, Event }
+import votbot.event.Event.{ ChannelMessage, Event, IncomingMessage }
 import votbot.event.EventHandler
 import zio.ZIO
 
 import scala.util.matching.Regex
 
-trait CommandHandler extends EventHandler {
+trait CommandHandler extends EventHandler[IncomingMessage] {
   val commands: List[String]
   val description: String
   def helpMessage: String = commands.mkString("[", ", ", "]") + " - " + description //fixme escape commands strings
 
   def response(sender: String, channel: String, command: String, args: String): ZIO[HandlerEnv, Throwable, Unit]
 
-  override def handle(event: Event): ZIO[HandlerEnv, Throwable, Unit] =
+  override def handle[E >: IncomingMessage](event: E): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       regex <- mkRegex
       _ <- ZIO.whenCase(event) {
