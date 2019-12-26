@@ -1,7 +1,7 @@
 package votbot.event
 
 import votbot.Main.VotbotEnv
-import votbot.event.handlers.BaseEventHandler
+import votbot.event.handlers.{ BaseEventHandler, CustomEventHandlers }
 import votbot.model.irc._
 import votbot.{ Api, BotState }
 import zio.ZIO
@@ -142,6 +142,9 @@ object Event {
       handler <- ZIO.access[BaseEventHandler](_.baseEventHandler)
       _       <- putStrLn("Processing Event: " + evt.toString)
       _       <- handler.handle(evt)
+
+      customHandlers <- ZIO.access[CustomEventHandlers](_.customEventHandlers)
+      _              <- customHandlers.handle(evt)
     } yield ()
 
 }

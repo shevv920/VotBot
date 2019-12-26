@@ -3,7 +3,7 @@ package votbot
 import java.nio.file.Paths
 
 import votbot.event.Event._
-import votbot.event.handlers.{ BaseEventHandler, DefaultEventHandler, Help }
+import votbot.event.handlers.{ BaseEventHandler, CustomEventHandlers, DefaultCustomHandlers, DefaultEventHandler, Help }
 import votbot.event.{ Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.irc._
@@ -45,6 +45,7 @@ object Main extends App {
       with QuotesRepo
       with ChannelSettingsRepo
       with ChannelHandlersRepo
+      with CustomEventHandlers
 
   private def mkCfgPath() =
     system
@@ -58,24 +59,24 @@ object Main extends App {
       cfg <- ZIO
               .fromEither(ConfigSource.file(cfgPath).load[Config])
               .orElse(ZIO.fromEither(ConfigSource.default.load[Config]))
-      st       <- Ref.make(State(cfg.bot.nick))
-      inQ      <- Queue.unbounded[String]
-      outQ     <- Queue.unbounded[Message]
-      pQ       <- Queue.unbounded[Message]
-      evtQ     <- Queue.unbounded[Event]
-      chs      <- Ref.make(Map.empty[ChannelKey, Channel])
-      handlers <- Ref.make(Set[EventHandler[Event]](Help, UltimateQuotes))
-      users    <- Ref.make(Map.empty[UserKey, User])
+      st    <- Ref.make(State(cfg.bot.nick))
+      inQ   <- Queue.unbounded[String]
+      outQ  <- Queue.unbounded[Message]
+      pQ    <- Queue.unbounded[Message]
+      evtQ  <- Queue.unbounded[Event]
+      chs   <- Ref.make(Map.empty[ChannelKey, Channel])
+      hs    <- Ref.make(Set[EventHandler[Event]](Help, UltimateQuotes))
+      users <- Ref.make(Map.empty[UserKey, User])
     } yield new VotbotEnv
       with BaseEnv
       with DefaultEventHandler
+      with DefaultCustomHandlers
       with SqliteDatabaseProvider
       with SqliteQuotesRepo
       with SqliteChannelSettingsRepo
       with SqliteChannelHandlersRepo
       with DefaultHttpClient {
-
-      override val customHandlers: Ref[Set[EventHandler[Event]]] = handlers
+      override val handlers: Ref[Set[EventHandler[Event]]] = hs
 
       override val configuration: Configuration.Service[Any] = new Configuration.Service[Any] {
         override val config: Config = cfg

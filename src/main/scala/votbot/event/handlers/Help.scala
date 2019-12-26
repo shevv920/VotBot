@@ -9,8 +9,8 @@ object Help extends CommandHandler {
   override def response(sender: String, channel: String, cmd: String, args: String): ZIO[HandlerEnv, Throwable, Unit] =
     for {
       api              <- ZIO.access[Api](_.api)
-      baseEventHandler <- ZIO.environment[BaseEventHandler]
-      customHandlers   <- baseEventHandler.customHandlers.get
+      baseEventHandler <- ZIO.environment[CustomEventHandlers]
+      customHandlers   <- baseEventHandler.handlers.get
       commandHandlers <- ZIO.effect(
                           customHandlers
                             .filter {

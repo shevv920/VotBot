@@ -1,14 +1,12 @@
 package votbot.event.handlers
 import votbot.event.Event._
-import votbot.event.EventHandler
 import votbot.model.irc._
 import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
-import zio.{ Ref, ZIO }
+import zio.ZIO
 
 trait BaseEventHandler {
   val baseEventHandler: BaseEventHandler.Service[Any]
-  val customHandlers: Ref[Set[EventHandler[Event]]]
 }
 
 object BaseEventHandler {
