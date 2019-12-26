@@ -11,7 +11,7 @@ mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".txt")) 
 libraryDependencies ++= Seq(
   "dev.zio"                      %% "zio"        % zioVersion,
   "dev.zio"                      %% "zio-nio"    % "0.4.0",
-  "com.github.pureconfig"        %% "pureconfig" % "0.12.1",
+  "com.github.pureconfig"        %% "pureconfig" % "0.12.2",
   "com.beachape"                 %% "enumeratum" % "1.5.13",
   "org.xerial"                   % "sqlite-jdbc" % "3.28.0",
   "com.typesafe.slick"           %% "slick"      % "3.3.2",
