@@ -60,8 +60,8 @@ object Client {
     for {
       msg      <- ZIO.accessM[Api](_.api.dequeueOutMessage())
       msgBytes <- Message.toByteArray(msg)
-      chunk    = Chunk.fromArray(msgBytes)
-      remN     <- channel.write(rem ++ chunk)
+      chunk    = rem ++ Chunk.fromArray(msgBytes)
+      remN     <- channel.write(chunk)
       rem      = chunk.drop(remN)
       _        <- putStrLn("Written: " + new String(msgBytes, StandardCharsets.UTF_8) + " remaining: " + rem.length)
       _        <- writer(channel, rem)

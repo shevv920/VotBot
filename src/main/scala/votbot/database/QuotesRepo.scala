@@ -51,6 +51,7 @@ trait SqliteQuotesRepo extends QuotesRepo { self: DatabaseProvider =>
       ZioSlick(q.result).map(_.toList).refineOrDie(e => DBError("Quotes find error:" + e.getMessage, e)).provide(self)
     }
 
+    //fixme: deal with duplicates
     override def addQuote(quote: Quote): ZIO[Any, DBError, Long] = {
       val q = quotes.returning(quotes.map(_.id)) += quote
       ZioSlick(q).refineOrDie(e => DBError("Error insert quote: " + e.getMessage, e)).provide(self)
