@@ -8,7 +8,7 @@ import votbot.model.irc.Message
 import zio.console.putStrLn
 import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
-import zio.nio.{ InetSocketAddress, SocketAddress }
+import zio.nio.core.{ InetSocketAddress, SocketAddress }
 import zio.{ Chunk, Schedule, Task, ZIO }
 
 object Client {
@@ -49,7 +49,7 @@ object Client {
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _            <- ZIO.accessM[Api](_.api.enqueueReceived(valid: _*))
+      _            <- ZIO.foreach(valid)(v => Api.>.enqueueReceived(v))
       _            <- reader(channel, rem.mkString(""))
     } yield ()
 

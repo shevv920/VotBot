@@ -21,7 +21,7 @@ object BotState {
   }
 }
 
-trait BotStateLive[R] extends BotState.Service[R] {
+trait DefaultBotState[R] extends BotState.Service[R] {
   override def currentNick(): ZIO[R, Nothing, String]                  = state.get.map(_.nick)
   override def currentCapabilities(): ZIO[R, Nothing, Set[Capability]] = state.get.map(_.capabilities)
   override def setNick(nick: String): Task[Unit]                       = state.update(s => s.copy(nick = nick)).unit

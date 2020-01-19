@@ -1,15 +1,16 @@
 package votbot
 
 import votbot.Main.{ BaseEnv, VotbotEnv }
-import votbot.database.{
-  SqliteChannelHandlersRepo,
-  SqliteChannelSettingsRepo,
-  SqliteDatabaseProvider,
-  SqliteQuotesRepo
+import votbot.database.{ Database, DefaultDatabase}
+import votbot.event.CustomHandlers.Handle
+import votbot.event.{
+  BaseEventHandlerSpec,
+  CustomHandlers,
+  DefaultCustomHandlers,
+  DefaultEventHandler,
+  Event,
+  EventSpec
 }
-import votbot.event.Event.Event
-import votbot.event.handlers.{ DefaultCustomHandlers, DefaultEventHandler }
-import votbot.event.{ BaseEventHandlerSpec, Event, EventHandler, EventSpec }
 import votbot.model.Bot.State
 import votbot.model.irc._
 import zio.blocking.Blocking
@@ -25,32 +26,33 @@ object Base {
     evtQ  <- Queue.unbounded[Event]
     chs   <- Ref.make(Map.empty[ChannelKey, Channel])
     users <- Ref.make(Map.empty[UserKey, User])
-    hs    <- Ref.make(Set.empty[EventHandler[Event]])
     st    <- Ref.make(State("votbot"))
+    hs    <- Ref.make(Set.empty[Handle])
+    hsf   <- Ref.make[Handle](PartialFunction.empty)
   } yield new VotbotEnv
     with TestConfiguration
     with BaseEnv
-    with SqliteDatabaseProvider
-    with SqliteChannelSettingsRepo
-    with SqliteChannelHandlersRepo
-    with SqliteQuotesRepo
     with DefaultEventHandler
-    with DefaultCustomHandlers
     with DefaultHttpClient
     with Blocking.Live {
+    override val database: Database.Service[Any] = new DefaultDatabase
 
     override val api = new DefaultApi[Any] {
       override val receivedQ: Queue[String]                     = inQ
       override val parsedMessageQ: Queue[Message]               = pQ
       override val outMessageQ: Queue[Message]                  = outQ
-      override val eventQ: Queue[Event.Event]                   = evtQ
+      override val eventQ: Queue[Event]                         = evtQ
       override val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
       override val knownUsers: Ref[Map[UserKey, User]]          = users
     }
-    override val handlers: Ref[Set[EventHandler[Event]]] = hs
 
-    override val botState: BotState.Service[Any] = new BotStateLive[Any] {
+    override val botState: BotState.Service[Any] = new DefaultBotState[Any] {
       override val state: Ref[State] = st
+    }
+
+    override val customHandlers: CustomHandlers.Service[Any] = new DefaultCustomHandlers {
+      override val handlers: Ref[Set[Handle]]  = hs
+      override val handleFunction: Ref[Handle] = hsf
     }
   }
 

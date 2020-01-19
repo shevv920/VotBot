@@ -1,44 +1,41 @@
 package votbot.event
 
-import votbot.Main.VotbotEnv
-import votbot.event.handlers.{ BaseEventHandler, CustomEventHandlers }
+import votbot.BotState
 import votbot.model.irc._
-import votbot.{ Api, BotState }
 import zio.ZIO
-import zio.console.putStrLn
-import zio.nio.SocketAddress
+import zio.nio.core.SocketAddress
+
+sealed trait Event extends Serializable with Product
 
 object Event {
-  sealed trait Event
-  trait IncomingMessage extends Event { val sender: String; val msg: String }
+  final case class IncomingMessage(sender: UserKey, target: Either[ChannelKey, UserKey], msg: String) extends Event
 
-  final case class ChannelMessage(sender: String, channel: String, msg: String)             extends IncomingMessage
-  final case class PrivateMessage(sender: String, msg: String)                              extends IncomingMessage
-  final case class Join(user: String, channel: String)                                      extends Event
-  final case class ExtendedJoin(user: String, channel: String, accountName: String)         extends Event
-  final case class BotJoin(channel: String)                                                 extends Event
-  final case class Part(user: String, channel: String, reason: String)                      extends Event
-  final case class BotPart(channel: String)                                                 extends Event
-  final case class Notice(sender: String, msg: String)                                      extends Event
-  final case class ChannelNotice(sender: String, channel: String, msg: String)              extends Event
-  final case class ChannelCTCP(nick: String, channel: String, special: String, msg: String) extends Event
-  final case class PrivateCTCP(nick: String, special: String, msg: String)                  extends Event
-  final case class Ping(args: Option[String])                                               extends Event
-  final case class Pong(args: String)                                                       extends Event
-  final case class Welcome(nick: String, host: String)                                      extends Event
-  final case class Numeric(cmd: String, msg: Vector[String], prefix: Prefix)                extends Event
-  final case class Quit(user: String, reason: String)                                       extends Event
-  final case class NamesList(channel: String, members: List[(String, List[ChannelMode])])   extends Event
-  final case class CapabilityList(caps: List[String])                                       extends Event
-  final case class CapabilityAck(caps: List[String])                                        extends Event
-  final case class CapabilityNak(caps: List[String])                                        extends Event
-  final case class UserLoggedIn(nick: String, accountName: String)                          extends Event
-  final case class UserLoggedOut(nick: String)                                              extends Event
-  final case class NickChanged(oldNick: String, newNick: String)                            extends Event
-  final case class Unknown(raw: Message)                                                    extends Event
-  final case class Connected(remote: SocketAddress)                                         extends Event
+  final case class Join(user: UserKey, channel: ChannelKey)                                      extends Event
+  final case class ExtendedJoin(user: UserKey, channel: ChannelKey, accountName: String)         extends Event
+  final case class BotJoin(channel: String)                                                      extends Event
+  final case class Part(userKey: UserKey, channel: ChannelKey, reason: String)                   extends Event
+  final case class BotPart(channel: ChannelKey)                                                  extends Event
+  final case class Notice(sender: UserKey, msg: String)                                          extends Event
+  final case class ChannelNotice(sender: UserKey, channel: ChannelKey, msg: String)              extends Event
+  final case class ChannelCTCP(user: UserKey, channel: ChannelKey, special: String, msg: String) extends Event
+  final case class PrivateCTCP(user: UserKey, special: String, msg: String)                      extends Event
+  final case class Ping(args: Option[String])                                                    extends Event
+  final case class Pong(args: String)                                                            extends Event
+  final case class Welcome(nick: String, host: String)                                           extends Event
+  final case class Numeric(cmd: String, args: Vector[String], prefix: Prefix)                    extends Event
+  final case class Quit(user: UserKey, reason: String)                                           extends Event
+  final case class NamesList(channel: ChannelKey, members: List[(String, List[ChannelMode])])    extends Event
+  final case class CapabilityList(caps: List[String])                                            extends Event
+  final case class CapabilityAck(caps: List[String])                                             extends Event
+  final case class CapabilityNak(caps: List[String])                                             extends Event
+  final case class UserLoggedIn(nick: UserKey, accountName: String)                              extends Event
+  final case class UserLoggedOut(nick: UserKey)                                                  extends Event
+  final case class NickChanged(oldNick: String, newNick: String)                                 extends Event
+  final case class Unknown(raw: Message)                                                         extends Event
+  final case class Connected(remote: SocketAddress)                                              extends Event
+  final case class CommandTriggered(cmd: votbot.command.Command, userKey: UserKey)               extends Event
 
-  def ircToEvent(ircMsg: Message): ZIO[BotState, Throwable, Event] =
+  def fromIrcMessage(ircMsg: Message): ZIO[BotState, Throwable, Event] =
     for {
       state          <- ZIO.access[BotState](_.botState)
       currentNick    <- state.currentNick()
@@ -46,19 +43,20 @@ object Event {
       event = ircMsg match {
         case Message(Command.Ping, args, _) =>
           Ping(args.headOption)
-        case Message(Command.Privmsg, args, Some(prefix)) if !prefix.nick.equalsIgnoreCase(currentNick) =>
-          if (args.last.startsWith("\u0001")) {
-            val special = args.last.drop(1).takeWhile(_ != ' ')
-            val msg     = args.last.drop(1 + special.length)
-            if (args.head.startsWith("#"))
-              ChannelCTCP(prefix.nick, args.head, special, msg)
+        case Message(Command.Privmsg, target :: last :: Nil, Some(prefix))
+            if !prefix.nick.equalsIgnoreCase(currentNick) =>
+          if (last.startsWith("\u0001")) {
+            val special = last.drop(1).takeWhile(_ != ' ')
+            val msg     = last.drop(1 + special.length)
+            if (target.startsWith("#"))
+              ChannelCTCP(UserKey(prefix.nick), ChannelKey(target), special, msg)
             else
-              PrivateCTCP(prefix.nick, special, msg)
+              PrivateCTCP(UserKey(prefix.nick), special, msg)
           } else {
-            if (args.head.startsWith("#"))
-              ChannelMessage(prefix.nick, args.head, args.last)
+            if (target.startsWith("#"))
+              IncomingMessage(UserKey(prefix.nick), Left(ChannelKey(target)), last)
             else
-              PrivateMessage(prefix.nick, args.last)
+              IncomingMessage(UserKey(prefix.nick), Right(UserKey(target)), last)
           }
         case Message(Command.Numeric(NumericCommand.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
           Welcome(args.head, prefix.host)
@@ -75,22 +73,28 @@ object Event {
                 (n, List.empty)
             }
             .toList
-          NamesList(channel, members)
+          NamesList(ChannelKey(channel), members)
         case rm @ Message(Command.Join, _, _) =>
           parseJoin(currentNick, isExtendedJoin, rm)
-        case Message(Command.Part, channel, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
-          BotPart(channel.mkString(", "))
+        case Message(Command.Part, channels, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
+          /*
+                    Servers MUST be able to parse arguments in the form of a list of
+                    target, but SHOULD NOT use lists when sending PART messages to
+                    clients.
+                    IRC RFC 2812 - https://tools.ietf.org/html/rfc2812#section-3.2.2
+           */
+          BotPart(ChannelKey(channels.mkString("")))
         case Message(Command.Part, args, Some(prefix)) if args.size > 1 =>
-          Part(prefix.nick, args.dropRight(1).mkString(", "), args.last) //last - reason
+          Part(UserKey(prefix.nick), ChannelKey(args.dropRight(1).mkString(", ")), args.last) //last - reason
         case Message(Command.Part, args, Some(prefix)) =>
-          Part(prefix.nick, args.mkString(", "), prefix.nick)
-        case Message(Command.Notice, args, Some(prefix)) =>
-          if (args.head.startsWith("#"))
-            ChannelNotice(prefix.nick, args.head, args.last)
+          Part(UserKey(prefix.nick), ChannelKey(args.mkString), prefix.nick)
+        case Message(Command.Notice, target :: msg :: Nil, Some(prefix)) =>
+          if (target.startsWith("#"))
+            ChannelNotice(UserKey(prefix.nick), ChannelKey(target), msg)
           else
-            Notice(prefix.nick, args.last)
+            Notice(UserKey(prefix.nick), msg)
         case Message(Command.Quit, args, Some(prefix)) =>
-          Quit(prefix.nick, args.mkString)
+          Quit(UserKey(prefix.nick), args.mkString)
         case Message(Command.Cap, args, _) if args.size == 3 =>
           val subCmd = args(1)
           val caps   = args(2).split(" ").toList
@@ -105,20 +109,20 @@ object Event {
         case Message(Command.Account, args, Some(prefix)) if args.nonEmpty =>
           args.head match {
             case "*" =>
-              UserLoggedOut(prefix.nick)
+              UserLoggedOut(UserKey(prefix.nick))
             case accName =>
-              UserLoggedIn(prefix.nick, accName)
+              UserLoggedIn(UserKey(prefix.nick), accName)
           }
         case Message(Command.Nick, args, Some(prefix)) if args.nonEmpty =>
           NickChanged(prefix.nick, args.head)
         case Message(Command.Numeric(NumericCommand.RPL_WHOREPLYX), args, Some(prefix)) =>
           args match {
-            case Vector(_, targetNick, targetAcc) if targetAcc != "0" =>
-              UserLoggedIn(targetNick, targetAcc)
+            case _ :: targetNick :: targetAcc :: Nil if targetAcc != "0" =>
+              UserLoggedIn(UserKey(targetNick), targetAcc)
             case _ => Unknown(ircMsg)
           }
         case Message(Command.Numeric(cmd), args, Some(prefix)) =>
-          Numeric(cmd, args, prefix)
+          Numeric(cmd, args.toVector, prefix)
         case _ => Unknown(ircMsg)
       }
     } yield event
@@ -128,23 +132,11 @@ object Event {
       case Message(Command.Join, args, Some(prefix)) if prefix.nick.equalsIgnoreCase(botNick) =>
         BotJoin(args.head)
       case Message(Command.Join, args, Some(prefix)) if !isExtended =>
-        Join(prefix.nick, args.head)
+        Join(UserKey(prefix.nick), ChannelKey(args.head))
       case Message(Command.Join, args, Some(prefix)) if args.size > 1 =>
         val channel     = args.head
         val accountName = args.tail.head
-        ExtendedJoin(prefix.nick, channel, accountName)
+        ExtendedJoin(UserKey(prefix.nick), ChannelKey(channel), accountName)
     }
-
-  def eventProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
-    for {
-      api     <- ZIO.access[Api](_.api)
-      evt     <- api.dequeueEvent()
-      handler <- ZIO.access[BaseEventHandler](_.baseEventHandler)
-      _       <- putStrLn("Processing Event: " + evt.toString)
-      _       <- handler.handle(evt)
-
-      customHandlers <- ZIO.access[CustomEventHandlers](_.customEventHandlers)
-      _              <- customHandlers.handle(evt)
-    } yield ()
 
 }

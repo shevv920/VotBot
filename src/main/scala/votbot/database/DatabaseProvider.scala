@@ -15,11 +15,8 @@ object DatabaseProvider {
   }
 }
 
-trait SqliteDatabaseProvider extends DatabaseProvider {
+class SQLiteDatabaseProvider extends DatabaseProvider.Service[Any] {
 
-  override val databaseProvider: DatabaseProvider.Service[Any] = new DatabaseProvider.Service[Any] {
-
-    override def db: Task[BasicBackend#DatabaseDef] =
-      ZIO.effect(SQLiteProfile.api.Database.forURL(url = "jdbc:sqlite:test.db"))
-  }
+  override def db: Task[BasicBackend#DatabaseDef] =
+    ZIO.effect(SQLiteProfile.api.Database.forURL(url = "jdbc:sqlite:test.db"))
 }
