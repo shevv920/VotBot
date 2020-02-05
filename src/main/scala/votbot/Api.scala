@@ -1,6 +1,6 @@
 package votbot
 
-import votbot.event.Event
+import votbot.event.{ Event, EventHandler }
 import votbot.model.irc.{ Channel, ChannelKey, Command, Message, User, UserKey }
 import zio._
 import zio.macros.annotation.accessible
@@ -44,11 +44,13 @@ object Api {
     def removeChannelFromUser(chKey: ChannelKey, uKey: UserKey): ZIO[R, Throwable, Unit]
     def isUserLoggedIn(userKey: UserKey): ZIO[R, Throwable, Boolean]
     def getUserAccountName(userKey: UserKey): ZIO[R, Throwable, String]
-    def askForAccByName(name: String): ZIO[R, Throwable, Unit]
+    def queryAccByNick(name: String): ZIO[R, Throwable, Unit]
     def changeUserNick(oldNick: String, newNick: String): ZIO[R, Throwable, Unit]
     def findChannel(channelKey: ChannelKey): ZIO[R, Throwable, Option[Channel]]
     def leaveChannel(channelKey: ChannelKey, reason: String = ""): ZIO[R, Throwable, Unit]
     def joinChannel(channelName: ChannelKey): ZIO[R, Throwable, Unit]
+    def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit]
+    def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit]
   }
 }
 
@@ -60,6 +62,24 @@ trait DefaultApi[R] extends Api.Service[R] {
   protected val eventQ: Queue[Event]
   protected val knownChannels: Ref[Map[ChannelKey, Channel]]
   protected val knownUsers: Ref[Map[UserKey, User]]
+
+  override def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit] =
+    for {
+      channel        <- getChannel(channelKey)
+      handlers       = channel.handlers - handler
+      newHandle      = handlers.map(_.handleFunction).foldLeft(Event.emptyHandleFunction)(_.orElse(_))
+      channelUpdated = channel.copy(handleFunction = newHandle)
+      _              <- addChannel(channelUpdated)
+    } yield ()
+
+  override def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit] =
+    for {
+      channel        <- getChannel(channelKey)
+      handlers       = channel.handlers + handler
+      newHandle      = handlers.map(_.handleFunction).foldLeft(Event.emptyHandleFunction)(_.orElse(_))
+      channelUpdated = channel.copy(handleFunction = newHandle)
+      _              <- addChannel(channelUpdated)
+    } yield ()
 
   override def joinChannel(channelName: ChannelKey): ZIO[R, Throwable, Unit] =
     for {
@@ -89,7 +109,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       _       <- ZIO.foreach(newUser.channels)(ch => addUserToChannel(ch, newUser))
     } yield ()
 
-  override def askForAccByName(name: String): ZIO[R, Throwable, Unit] =
+  override def queryAccByNick(name: String): ZIO[R, Throwable, Unit] =
     enqueueOutMessage(Message(Command.Who, List(name, "+n%na")))
 
   override def getUserAccountName(userKey: UserKey): ZIO[R, Throwable, String] =

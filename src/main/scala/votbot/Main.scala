@@ -2,18 +2,16 @@ package votbot
 
 import java.nio.file.Paths
 
-import votbot.event.{ CustomHandlers, DefaultCustomHandlers, DefaultEventHandler, Event, EventHandler }
+import pureconfig._
+import votbot.database.{ Database, DefaultDatabase }
+import votbot.event.{ DefaultEventHandler, Event, EventHandler }
 import votbot.model.Bot.State
 import votbot.model.irc._
-import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.{ Console, _ }
 import zio.random.Random
-import zio.system
-import pureconfig._
-import votbot.database.{ Database, DefaultDatabase }
-import votbot.event.CustomHandlers.Handle
+import zio._
 import pureconfig.generic.auto._
 
 object Main extends App {
@@ -31,7 +29,6 @@ object Main extends App {
       with Blocking
       with HttpClient
       with Database
-      with CustomHandlers
 
   private def mkCfgPath() =
     system
@@ -57,8 +54,6 @@ object Main extends App {
       evtQ  <- Queue.unbounded[Event]
       chs   <- Ref.make(Map.empty[ChannelKey, Channel])
       users <- Ref.make(Map.empty[UserKey, User])
-      hs    <- Ref.make(Set.empty[Handle])
-      hsf   <- Ref.make[Handle](PartialFunction.empty)
     } yield new VotbotEnv with BaseEnv with DefaultEventHandler with DefaultHttpClient {
       override val database: Database.Service[Any] = new DefaultDatabase
 
@@ -83,10 +78,6 @@ object Main extends App {
         override protected val knownUsers: Ref[Map[UserKey, User]]          = users
       }
 
-      override val customHandlers: CustomHandlers.Service[Any] = new DefaultCustomHandlers {
-        override val handlers: Ref[Set[Handle]]  = hs
-        override val handleFunction: Ref[Handle] = hsf
-      }
     }
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
@@ -101,7 +92,7 @@ object Main extends App {
       parser         <- IrcMessageParser.parser().forever.fork
       msgProcessor   <- messageProcessor().forever.fork
       evtProcessor   <- eventProcessor().forever.fork
-      consoleControl <- ConsoleControl().fork
+      consoleControl <- ConsoleControl().forever.fork
 //      _              <- CustomHandlers.>.register(DefaultCustomHandlers.helloOnJoin)
       _ <- client.await
       _ <- parser.interrupt
@@ -115,11 +106,8 @@ object Main extends App {
       api     <- ZIO.access[Api](_.api)
       evt     <- api.dequeueEvent()
       handler <- ZIO.access[EventHandler](_.eventHandler)
-      custom  <- ZIO.access[CustomHandlers](_.customHandlers)
       _       <- putStrLn("Processing Event: " + evt.toString)
       _       <- handler.handle(evt)
-      _       <- putStrLn(s"${evt.toString} passed to custom handlers")
-      _       <- custom.handle(evt)
     } yield ()
 
   def messageProcessor(): ZIO[VotbotEnv, Throwable, Unit] =

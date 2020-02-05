@@ -1,6 +1,7 @@
 package votbot.event
 
 import votbot.BotState
+import votbot.Main.VotbotEnv
 import votbot.model.irc._
 import zio.ZIO
 import zio.nio.core.SocketAddress
@@ -8,6 +9,10 @@ import zio.nio.core.SocketAddress
 sealed trait Event extends Serializable with Product
 
 object Event {
+  type HandleFunction = PartialFunction[Event, ZIO[VotbotEnv, Throwable, Unit]]
+  val emptyHandleFunction: HandleFunction = { case _ => ZIO.unit }
+  final case class Handler(name: String, handleFunction: HandleFunction)
+
   final case class IncomingMessage(sender: UserKey, target: Either[ChannelKey, UserKey], msg: String) extends Event
 
   final case class Join(user: UserKey, channel: ChannelKey)                                      extends Event
@@ -60,15 +65,15 @@ object Event {
           }
         case Message(Command.Numeric(NumericCommand.RPL_WELCOME), args, Some(prefix)) if args.nonEmpty =>
           Welcome(args.head, prefix.host)
-        case Message(Command.Numeric(NumericCommand.RPL_NAMREPLY), args, _) =>
+        case Message(Command.Numeric(NumericCommand.RPL_NAMREPLY), args, _) if args.size >= 3 =>
           val channel = args(2)
           val members = args.last
             .split(" ")
             .map {
               case n if n.startsWith("@") =>
-                (n.drop(1), List(ChannelMode("o", Some(n.drop(1)))))
+                (n.drop(1), List(ChannelMode.o(UserKey(n.drop(1)))))
               case n if n.startsWith("+") =>
-                (n.drop(1), List(ChannelMode("v", Some(n.drop(1)))))
+                (n.drop(1), List(ChannelMode.v(UserKey(n.drop(1)))))
               case n =>
                 (n, List.empty)
             }

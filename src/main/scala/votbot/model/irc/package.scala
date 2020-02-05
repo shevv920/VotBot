@@ -16,7 +16,4 @@ package object irc {
     def apply(str: String): UserKey = new UserKey(str.toLowerCase)
   }
 
-  final case class Channel(name: String, modes: List[ChannelMode], members: Set[UserKey])
-  final case class ChannelMode(mode: String, args: Option[String])
-  final case class User(name: String, channels: Set[ChannelKey], accountName: Option[String] = None)
 }

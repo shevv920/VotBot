@@ -1,5 +1,6 @@
 /.idea/
 /project/target/
+/project/metals.sbt
 /target/
 /*.ipr
 /*.iws
@@ -8,3 +9,6 @@
 /src/main/resources/database.db
 *.db
 *.sc
+/.bloop/
+/.metals/
+/out/

@@ -1,16 +1,8 @@
 package votbot
 
 import votbot.Main.{ BaseEnv, VotbotEnv }
-import votbot.database.{ Database, DefaultDatabase}
-import votbot.event.CustomHandlers.Handle
-import votbot.event.{
-  BaseEventHandlerSpec,
-  CustomHandlers,
-  DefaultCustomHandlers,
-  DefaultEventHandler,
-  Event,
-  EventSpec
-}
+import votbot.database.{ Database, DefaultDatabase }
+import votbot.event.{ BaseEventHandlerSpec, DefaultEventHandler, Event, EventSpec }
 import votbot.model.Bot.State
 import votbot.model.irc._
 import zio.blocking.Blocking
@@ -27,8 +19,6 @@ object Base {
     chs   <- Ref.make(Map.empty[ChannelKey, Channel])
     users <- Ref.make(Map.empty[UserKey, User])
     st    <- Ref.make(State("votbot"))
-    hs    <- Ref.make(Set.empty[Handle])
-    hsf   <- Ref.make[Handle](PartialFunction.empty)
   } yield new VotbotEnv
     with TestConfiguration
     with BaseEnv
@@ -50,10 +40,6 @@ object Base {
       override val state: Ref[State] = st
     }
 
-    override val customHandlers: CustomHandlers.Service[Any] = new DefaultCustomHandlers {
-      override val handlers: Ref[Set[Handle]]  = hs
-      override val handleFunction: Ref[Handle] = hsf
-    }
   }
 
   val envM = env.toManaged_

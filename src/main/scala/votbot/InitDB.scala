@@ -1,7 +1,7 @@
 package votbot
 
 import votbot.database.{ Database, DefaultDatabase }
-import votbot.model.DB.ChannelSetting
+import votbot.model.DB.ChannelPrefs
 import votbot.model.irc.ChannelKey
 import zio.ZIO
 import zio.App
@@ -24,8 +24,8 @@ object InitDB extends App {
       _   <- db.channelSettingsRepo.createSchemaIfNotExists
       _   <- db.channelHandlersRepo.createSchemaIfNotExists
 
-      autoJoinChannelsSettings = cfg.bot.autoJoinChannels.map(c => ChannelSetting(ChannelKey(c), autoJoin = true))
-      _                        <- db.channelSettingsRepo.insertAll(autoJoinChannelsSettings)
+      autoJoinChannelsPrefs = cfg.bot.autoJoinChannels.map(c => ChannelPrefs(ChannelKey(c), autoJoin = true))
+      _                     <- db.channelSettingsRepo.insertAll(autoJoinChannelsPrefs)
     } yield ()
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] =

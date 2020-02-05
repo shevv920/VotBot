@@ -1,6 +1,6 @@
 package votbot.event
 
-import votbot.database.{ ChannelSettingsRepo, Database }
+import votbot.database.Database
 import votbot.event.Event._
 import votbot.model.irc._
 import votbot.{ Api, BotState, Configuration }
@@ -32,7 +32,7 @@ object EventHandler {
   }
 }
 
-trait DefaultEventHandler extends EventHandler {
+trait DefaultEventHandler extends EventHandler { self =>
   val configuration: Configuration.Service[Any]
   val api: Api.Service[Any]
   val botState: BotState.Service[Any]
@@ -60,9 +60,7 @@ trait DefaultEventHandler extends EventHandler {
       handlerFunctions.foldLeft(PartialFunction.empty[Event, ZIO[Any, Throwable, Unit]])(_.orElse(_))
 
     override def handle(event: Event): ZIO[Any, Throwable, Unit] =
-      for {
-        _ <- ZIO.whenCase(event)(handleFunction)
-      } yield ()
+      ZIO.whenCase(event)(handleFunction)
 
     override def onPing: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
       case Ping(Some(args)) =>
@@ -88,15 +86,24 @@ trait DefaultEventHandler extends EventHandler {
     override def onWelcome: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
       case Welcome(nick, _) =>
         for {
-          dbAutoJoinChannels <- database.channelSettingsRepo.findAutoJoinEnabled()
-          joinCmd            = Message(Command.Join, dbAutoJoinChannels.mkString(","))
-          _                  <- api.enqueueOutMessage(joinCmd).flatMap(_ => botState.setNick(nick))
+          chanSettings          <- database.channelSettingsRepo.getAll
+          (enabledS, disabledS) = chanSettings.span(_.autoJoin == true)
+          enabled               = enabledS.map(_.channelKey)
+          disabled              = disabledS.map(_.channelKey)
+          cfgAutoJoinAll        = configuration.bot.autoJoinChannels.map(ChannelKey(_))
+          //exclude disabled
+          autoJoinEnabled = (cfgAutoJoinAll.filterNot(disabled.contains(_)) ++ enabled).map(_.value)
+          joinCmd         = Message(Command.Join, autoJoinEnabled.mkString(","))
+          _               <- api.enqueueOutMessage(joinCmd) *> botState.setNick(nick)
         } yield ()
     }
 
     override def onJoin: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
       case BotJoin(chName) =>
-        api.addChannel(Channel(chName, List.empty, Set.empty))
+        for {
+          _ <- api.addChannel(Channel(chName, List.empty, Set.empty))
+        } yield ()
+
       case Join(userKey, channel) =>
         for {
           user <- api.getOrCreateUser(userKey.value)
@@ -144,18 +151,16 @@ trait DefaultEventHandler extends EventHandler {
     }
 
     override def onNamesList: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
-      case NamesList(channel, members) =>
+      case NamesList(channelKey, members) =>
         for {
-          currentNick <- botState.currentNick()
-          //filter out bot from names list
-          channelMembers <- ZIO.foreach(members.filterNot(_._1.equalsIgnoreCase(currentNick))) { tuple =>
+          channelMembers <- ZIO.foreach(members) { tuple =>
                              for {
                                user  <- api.getOrCreateUser(tuple._1)
                                modes = tuple._2
-                             } yield user
+                             } yield (user, modes)
                            }
-          _ <- ZIO.foreach(channelMembers)(api.addUserToChannel(channel, _))
-          _ <- ZIO.foreach(channelMembers)(u => api.askForAccByName(u.name))
+          _ <- ZIO.foreach(channelMembers)(t => api.addUserToChannel(channelKey, t._1))
+          _ <- ZIO.foreach(channelMembers)(u => api.queryAccByNick(u._1.name))
         } yield ()
     }
 
