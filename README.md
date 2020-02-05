@@ -1,1 +1,1 @@
-#### Irc bot using zio
+#### Experimental Irc bot using zio
