@@ -1,5 +1,6 @@
 package votbot
 
+import votbot.Api.Api
 import votbot.command.Command
 import zio.ZIO
 import zio.console._

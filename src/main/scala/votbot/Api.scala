@@ -1,60 +1,73 @@
 package votbot
 
-import votbot.event.{ Event, EventHandler }
+import votbot.event.Event
 import votbot.model.irc.{ Channel, ChannelKey, Command, Message, User, UserKey }
 import zio._
-import zio.macros.annotation.accessible
-
-@accessible(">")
-trait Api {
-  val api: Api.Service[Any]
-}
 
 object Api {
+  type Api = Has[Api.Service]
 
-  trait Service[R] {
+  trait Service {
 
-    def enqueueEvent(evt: Event): ZIO[R, Nothing, Unit]
-    def enqueueParsed(msg: Message): ZIO[R, Nothing, Unit]
-    def enqueueReceived(raw: String): ZIO[R, Nothing, Unit]
-    def enqueueOutMessage(msg: Message): ZIO[R, Nothing, Unit]
+    def enqueueEvent(evt: Event): IO[Nothing, Unit]
+    def enqueueParsed(msg: Message): IO[Nothing, Unit]
+    def enqueueReceived(raw: String): IO[Nothing, Unit]
+    def enqueueOutMessage(msg: Message): IO[Nothing, Unit]
 
-    def dequeueEvent(): ZIO[R, Nothing, Event]
-    def dequeueReceived(): ZIO[R, Nothing, String]
-    def dequeueOutMessage(): ZIO[R, Nothing, Message]
-    def dequeueAllOutMessages(): ZIO[R, Nothing, List[Message]]
-    def dequeueParsedMessage(): ZIO[R, Nothing, Message]
+    def dequeueEvent(): IO[Nothing, Event]
+    def dequeueReceived(): IO[Nothing, String]
+    def dequeueOutMessage(): IO[Nothing, Message]
+    def dequeueAllOutMessages(): IO[Nothing, List[Message]]
+    def dequeueParsedMessage(): IO[Nothing, Message]
 
-    def sendChannelMessage(channel: ChannelKey, msg: String): ZIO[R, Nothing, Unit]
-    def sendPrivateMessage(nick: String, msg: String): ZIO[R, Nothing, Unit]
-    def allChannels(): ZIO[R, Throwable, List[Channel]]
-    def addChannel(channel: Channel): ZIO[R, Nothing, Unit]
-    def removeChannel(chKey: ChannelKey): ZIO[R, Nothing, Unit]
-    def addUserToChannel(chKey: ChannelKey, userKey: UserKey): ZIO[R, Throwable, Unit]
-    def addUserToChannel(chKey: ChannelKey, user: User): ZIO[R, Throwable, Unit]
-    def removeChannelMember(chKey: ChannelKey, userKey: UserKey): ZIO[R, Throwable, Unit]
-    def getChannel(chKey: ChannelKey): ZIO[R, Throwable, Channel]
-    def addUser(user: User): ZIO[R, Throwable, Unit]
-    def removeUser(userName: UserKey): ZIO[R, Throwable, Unit]
-    def removeUser(user: User): ZIO[R, Throwable, Unit]
-    def getOrCreateUser(name: String): ZIO[R, Throwable, User]
-    def findUser(name: String): ZIO[R, Throwable, Option[User]]
-    def getUser(name: UserKey): ZIO[R, Throwable, User]
-    def addChannelToUser(chKey: ChannelKey, uKey: UserKey): ZIO[R, Throwable, Unit]
-    def removeChannelFromUser(chKey: ChannelKey, uKey: UserKey): ZIO[R, Throwable, Unit]
-    def isUserLoggedIn(userKey: UserKey): ZIO[R, Throwable, Boolean]
-    def getUserAccountName(userKey: UserKey): ZIO[R, Throwable, String]
-    def queryAccByNick(name: String): ZIO[R, Throwable, Unit]
-    def changeUserNick(oldNick: String, newNick: String): ZIO[R, Throwable, Unit]
-    def findChannel(channelKey: ChannelKey): ZIO[R, Throwable, Option[Channel]]
-    def leaveChannel(channelKey: ChannelKey, reason: String = ""): ZIO[R, Throwable, Unit]
-    def joinChannel(channelName: ChannelKey): ZIO[R, Throwable, Unit]
-    def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit]
-    def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit]
+    def sendChannelMessage(channel: ChannelKey, msg: String): IO[Nothing, Unit]
+    def sendPrivateMessage(nick: String, msg: String): IO[Nothing, Unit]
+    def allChannels(): IO[Throwable, List[Channel]]
+    def addChannel(channel: Channel): IO[Nothing, Unit]
+    def removeChannel(chKey: ChannelKey): IO[Nothing, Unit]
+    def addUserToChannel(chKey: ChannelKey, userKey: UserKey): IO[Throwable, Unit]
+    def addUserToChannel(chKey: ChannelKey, user: User): IO[Throwable, Unit]
+    def removeChannelMember(chKey: ChannelKey, userKey: UserKey): IO[Throwable, Unit]
+    def getChannel(chKey: ChannelKey): IO[Throwable, Channel]
+    def addUser(user: User): IO[Throwable, Unit]
+    def removeUser(userName: UserKey): IO[Throwable, Unit]
+    def removeUser(user: User): IO[Throwable, Unit]
+    def getOrCreateUser(name: String): IO[Throwable, User]
+    def findUser(name: String): IO[Throwable, Option[User]]
+    def getUser(name: UserKey): IO[Throwable, User]
+    def addChannelToUser(chKey: ChannelKey, uKey: UserKey): IO[Throwable, Unit]
+    def removeChannelFromUser(chKey: ChannelKey, uKey: UserKey): IO[Throwable, Unit]
+    def isUserLoggedIn(userKey: UserKey): IO[Throwable, Boolean]
+    def getUserAccountName(userKey: UserKey): IO[Throwable, String]
+    def queryAccByNick(name: String): IO[Throwable, Unit]
+    def changeUserNick(oldNick: String, newNick: String): IO[Throwable, Unit]
+    def findChannel(channelKey: ChannelKey): IO[Throwable, Option[Channel]]
+    def leaveChannel(channelKey: ChannelKey, reason: String = ""): IO[Throwable, Unit]
+    def joinChannel(channelName: ChannelKey): IO[Throwable, Unit]
+    def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): IO[Throwable, Unit]
+    def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): IO[Throwable, Unit]
+  }
+
+  val defaultApi: ZLayer.NoDeps[Nothing, Api] = ZLayer.fromEffect {
+    for {
+      rcvdQ      <- Queue.unbounded[String]
+      parsedMsgQ <- Queue.unbounded[Message]
+      outMsgQ    <- Queue.unbounded[Message]
+      evtQ       <- Queue.unbounded[Event]
+      kChannels  <- Ref.make[Map[ChannelKey, Channel]](Map.empty)
+      kUsers     <- Ref.make[Map[UserKey, User]](Map.empty)
+    } yield new DefaultApi {
+      override protected val receivedQ: Queue[String]                     = rcvdQ
+      override protected val parsedMessageQ: Queue[Message]               = parsedMsgQ
+      override protected val outMessageQ: Queue[Message]                  = outMsgQ
+      override protected val eventQ: Queue[Event]                         = evtQ
+      override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = kChannels
+      override protected val knownUsers: Ref[Map[UserKey, User]]          = kUsers
+    }
   }
 }
 
-trait DefaultApi[R] extends Api.Service[R] {
+trait DefaultApi extends Api.Service {
 
   protected val receivedQ: Queue[String]
   protected val parsedMessageQ: Queue[Message]
@@ -63,7 +76,7 @@ trait DefaultApi[R] extends Api.Service[R] {
   protected val knownChannels: Ref[Map[ChannelKey, Channel]]
   protected val knownUsers: Ref[Map[UserKey, User]]
 
-  override def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit] =
+  override def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): IO[Throwable, Unit] =
     for {
       channel        <- getChannel(channelKey)
       handlers       = channel.handlers - handler
@@ -72,7 +85,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       _              <- addChannel(channelUpdated)
     } yield ()
 
-  override def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): ZIO[R, Throwable, Unit] =
+  override def registerChannelHandler(channelKey: ChannelKey, handler: Event.Handler): IO[Throwable, Unit] =
     for {
       channel        <- getChannel(channelKey)
       handlers       = channel.handlers + handler
@@ -81,7 +94,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       _              <- addChannel(channelUpdated)
     } yield ()
 
-  override def joinChannel(channelName: ChannelKey): ZIO[R, Throwable, Unit] =
+  override def joinChannel(channelName: ChannelKey): IO[Throwable, Unit] =
     for {
       channel <- findChannel(channelName)
       _ <- ZIO.when(channel.isEmpty) {
@@ -89,7 +102,7 @@ trait DefaultApi[R] extends Api.Service[R] {
           }
     } yield ()
 
-  override def leaveChannel(channelKey: ChannelKey, reason: String = ""): ZIO[R, Throwable, Unit] =
+  override def leaveChannel(channelKey: ChannelKey, reason: String = ""): IO[Throwable, Unit] =
     for {
       channel <- findChannel(channelKey)
       _ <- ZIO.whenM(ZIO.effectTotal(channel.nonEmpty)) {
@@ -97,10 +110,10 @@ trait DefaultApi[R] extends Api.Service[R] {
           }
     } yield ()
 
-  override def findChannel(channelKey: ChannelKey): ZIO[R, Throwable, Option[Channel]] =
+  override def findChannel(channelKey: ChannelKey): IO[Throwable, Option[Channel]] =
     knownChannels.get.map(_.get(channelKey))
 
-  override def changeUserNick(oldNick: String, newNick: String): ZIO[R, Throwable, Unit] =
+  override def changeUserNick(oldNick: String, newNick: String): IO[Throwable, Unit] =
     for {
       oldUser <- getUser(UserKey(oldNick))
       newUser = oldUser.copy(name = newNick, accountName = None)
@@ -109,23 +122,23 @@ trait DefaultApi[R] extends Api.Service[R] {
       _       <- ZIO.foreach(newUser.channels)(ch => addUserToChannel(ch, newUser))
     } yield ()
 
-  override def queryAccByNick(name: String): ZIO[R, Throwable, Unit] =
+  override def queryAccByNick(name: String): IO[Throwable, Unit] =
     enqueueOutMessage(Message(Command.Who, List(name, "+n%na")))
 
-  override def getUserAccountName(userKey: UserKey): ZIO[R, Throwable, String] =
+  override def getUserAccountName(userKey: UserKey): IO[Throwable, String] =
     getUser(userKey).map(_.accountName.getOrElse("*"))
 
-  override def isUserLoggedIn(userKey: UserKey): ZIO[R, Throwable, Boolean] =
+  override def isUserLoggedIn(userKey: UserKey): IO[Throwable, Boolean] =
     getUser(userKey).map(_.accountName.nonEmpty)
 
-  override def removeChannelFromUser(chName: ChannelKey, uName: UserKey): ZIO[R, Throwable, Unit] =
+  override def removeChannelFromUser(chName: ChannelKey, uName: UserKey): IO[Throwable, Unit] =
     for {
       user <- getUser(uName)
       chs  = user.channels.filterNot(_ == chName)
       _    <- knownUsers.update(us => us + (uName -> user.copy(channels = chs)))
     } yield ()
 
-  override def addChannelToUser(chKey: ChannelKey, uName: UserKey): ZIO[R, Throwable, Unit] =
+  override def addChannelToUser(chKey: ChannelKey, uName: UserKey): IO[Throwable, Unit] =
     for {
       ch    <- getChannel(chKey)
       user  <- getUser(uName)
@@ -133,7 +146,7 @@ trait DefaultApi[R] extends Api.Service[R] {
       _     <- knownUsers.update(us => us + (uName -> nUser))
     } yield ()
 
-  override def getUser(uKey: UserKey): ZIO[R, Throwable, User] =
+  override def getUser(uKey: UserKey): IO[Throwable, User] =
     for {
       users <- knownUsers.get
       user <- ZIO
@@ -141,23 +154,23 @@ trait DefaultApi[R] extends Api.Service[R] {
                .mapError(_ => new Exception("User does not exists " + uKey))
     } yield user
 
-  override def findUser(name: String): ZIO[R, Throwable, Option[User]] =
+  override def findUser(name: String): IO[Throwable, Option[User]] =
     for {
       users <- knownUsers.get
       user  = users.get(UserKey(name))
     } yield user
 
-  override def getOrCreateUser(name: String): ZIO[R, Throwable, User] =
+  override def getOrCreateUser(name: String): IO[Throwable, User] =
     for {
       users <- knownUsers.get
       user  <- ZIO.effect(users.getOrElse(UserKey(name), User(name, Set.empty)))
       _     <- addUser(user)
     } yield user
 
-  override def addUser(user: User): ZIO[R, Throwable, Unit] =
+  override def addUser(user: User): IO[Throwable, Unit] =
     knownUsers.update(m => m + (UserKey(user.name) -> user)).unit
 
-  override def removeUser(user: User): ZIO[R, Throwable, Unit] =
+  override def removeUser(user: User): IO[Throwable, Unit] =
     for {
       _ <- ZIO.foreach(user.channels) { chName =>
             removeChannelMember(chName, UserKey(user.name))
@@ -165,11 +178,11 @@ trait DefaultApi[R] extends Api.Service[R] {
       _ <- knownUsers.update(u => u - UserKey(user.name))
     } yield ()
 
-  override def removeUser(userName: UserKey): ZIO[R, Throwable, Unit] =
+  override def removeUser(userName: UserKey): IO[Throwable, Unit] =
     getUser(userName)
       .map(user => removeUser(user))
 
-  override def removeChannelMember(chName: ChannelKey, memberName: UserKey): ZIO[R, Throwable, Unit] =
+  override def removeChannelMember(chName: ChannelKey, memberName: UserKey): IO[Throwable, Unit] =
     for {
       channel <- getChannel(chName)
       user    <- getUser(memberName)
@@ -177,20 +190,20 @@ trait DefaultApi[R] extends Api.Service[R] {
       _       <- removeChannelFromUser(chName, memberName)
     } yield ()
 
-  override def addUserToChannel(chKey: ChannelKey, uKey: UserKey): ZIO[R, Throwable, Unit] =
+  override def addUserToChannel(chKey: ChannelKey, uKey: UserKey): IO[Throwable, Unit] =
     for {
       user <- getOrCreateUser(uKey.value)
       _    <- addUserToChannel(chKey, user)
     } yield ()
 
-  override def addUserToChannel(chKey: ChannelKey, user: User): ZIO[R, Throwable, Unit] =
+  override def addUserToChannel(chKey: ChannelKey, user: User): IO[Throwable, Unit] =
     for {
       channel <- getChannel(chKey)
       nCh     = channel.copy(members = channel.members + UserKey(user.name))
       _       <- knownChannels.update(m => m + (chKey -> nCh))
     } yield ()
 
-  override def getChannel(chName: ChannelKey): ZIO[R, Throwable, Channel] =
+  override def getChannel(chName: ChannelKey): IO[Throwable, Channel] =
     for {
       channels <- knownChannels.get
       channel <- ZIO
@@ -204,7 +217,7 @@ trait DefaultApi[R] extends Api.Service[R] {
   override def addChannel(channel: Channel): UIO[Unit] =
     knownChannels.update(_ + (ChannelKey(channel.name) -> channel)).unit
 
-  override def allChannels(): ZIO[R, Throwable, List[Channel]] =
+  override def allChannels(): IO[Throwable, List[Channel]] =
     knownChannels.get.map(_.values.toList)
 
   override def enqueueEvent(evt: Event): UIO[Unit] =

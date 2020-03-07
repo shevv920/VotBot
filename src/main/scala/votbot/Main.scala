@@ -1,118 +1,82 @@
 package votbot
 
-import java.nio.file.Paths
-
-import pureconfig._
-import votbot.database.{ Database, DefaultDatabase }
-import votbot.event.{ DefaultEventHandler, Event, EventHandler }
-import votbot.model.Bot.State
-import votbot.model.irc._
+import votbot.Api.Api
+import votbot.BotState.BotState
+import votbot.Configuration.Configuration
+import votbot.HttpClient.HttpClient
+import votbot.database.Database
+import votbot.database.Database.Database
+import votbot.event.EventHandler.EventHandler
+import votbot.event.{ Event, EventHandler }
+import zio.ZLayer.NoDeps
+import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.{ Console, _ }
 import zio.random.Random
-import zio._
-import pureconfig.generic.auto._
+import zio.system.System
 
 object Main extends App {
 
-  trait BaseEnv extends Console.Live with Clock.Live with Random.Live with Blocking.Live
+  val baseLayer = Console.live ++
+    Clock.live ++
+    Blocking.live ++
+    Random.live ++
+    System.live
 
-  trait VotbotEnv
-      extends Console
-      with Clock
-      with Random
-      with Configuration
-      with BotState
-      with Api
-      with EventHandler
-      with Blocking
-      with HttpClient
-      with Database
+  type VotbotEnv = Any
+    with Console
+    with Clock
+    with Random
+    with Configuration
+    with BotState
+    with Api
+    with EventHandler
+    with Blocking
+    with HttpClient
+    with Database
 
-  private def mkCfgPath() =
-    system
-      .property("user.dir")
-      .map(_.getOrElse(".") + "/" + "application.conf")
-      .map(Paths.get(_))
+  val config: ZLayer[Any, Any, Configuration]  = baseLayer >>> Configuration.defaultConfig
+  val botState: ZLayer[Any, Any, BotState]     = config >>> BotState.defaultBotState
+  val api: NoDeps[Nothing, Api]                = Api.defaultApi
+  val httpClient: ZLayer[Any, Any, HttpClient] = config >>> HttpClient.defaultHttpClient
+  val database: NoDeps[Nothing, Database]      = Database.defaultDatabase
 
-  def readConfig() =
-    for {
-      path <- mkCfgPath()
-      cfg <- ZIO
-              .fromEither(ConfigSource.file(path).load[Config])
-              .orElse(ZIO.fromEither(ConfigSource.default.load[Config]))
-    } yield cfg
-
-  private def mkEnvironment: ZIO[ZEnv, Serializable, VotbotEnv] =
-    for {
-      cfg   <- readConfig()
-      st    <- Ref.make(State(cfg.bot.nick))
-      inQ   <- Queue.unbounded[String]
-      outQ  <- Queue.unbounded[Message]
-      pQ    <- Queue.unbounded[Message]
-      evtQ  <- Queue.unbounded[Event]
-      chs   <- Ref.make(Map.empty[ChannelKey, Channel])
-      users <- Ref.make(Map.empty[UserKey, User])
-    } yield new VotbotEnv with BaseEnv with DefaultEventHandler with DefaultHttpClient {
-      override val database: Database.Service[Any] = new DefaultDatabase
-
-      override val configuration: Configuration.Service[Any] = new Configuration.Service[Any] {
-        override val config: Config = cfg
-        override val http: Http     = cfg.http
-        override val server: Server = cfg.server
-        override val admin: Admin   = cfg.admin
-        override val bot: BotProps  = cfg.bot
-      }
-
-      override val botState: BotState.Service[Any] = new DefaultBotState[Any] {
-        override protected val state: Ref[State] = st
-      }
-
-      override val api: Api.Service[Any] = new DefaultApi[Any] {
-        override protected val receivedQ: Queue[String]                     = inQ
-        override protected val parsedMessageQ: Queue[Message]               = pQ
-        override protected val outMessageQ: Queue[Message]                  = outQ
-        override protected val eventQ: Queue[Event]                         = evtQ
-        override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = chs
-        override protected val knownUsers: Ref[Map[UserKey, User]]          = users
-      }
-
-    }
+  val eventHandler = (baseLayer ++ config ++ botState ++ api ++ httpClient ++ database) >>> EventHandler.defaultEventHandler
+  val votBotEnv    = baseLayer ++ config ++ botState ++ api ++ httpClient ++ database ++ eventHandler
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic(args)
-      .provideSomeM(mkEnvironment)
+      .provideCustomLayer(votBotEnv)
       .either
       .map(_.fold(e => { println(e); 1 }, _ => 0))
 
-  def mainLogic(args: List[String]): ZIO[VotbotEnv, Throwable, Unit] =
+  def mainLogic(args: List[String]): ZIO[VotbotEnv, Serializable, Unit] =
     for {
       client         <- Client.make().fork
       parser         <- IrcMessageParser.parser().forever.fork
       msgProcessor   <- messageProcessor().forever.fork
       evtProcessor   <- eventProcessor().forever.fork
       consoleControl <- ConsoleControl().forever.fork
-//      _              <- CustomHandlers.>.register(DefaultCustomHandlers.helloOnJoin)
-      _ <- client.await
-      _ <- parser.interrupt
-      _ <- evtProcessor.interrupt
-      _ <- msgProcessor.interrupt
-      _ <- consoleControl.interrupt
+      _              <- client.await
+      _              <- parser.interrupt
+      _              <- evtProcessor.interrupt
+      _              <- msgProcessor.interrupt
+      _              <- consoleControl.interrupt
     } yield ()
 
   def eventProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      api     <- ZIO.access[Api](_.api)
+      api     <- ZIO.access[Api](_.get)
       evt     <- api.dequeueEvent()
-      handler <- ZIO.access[EventHandler](_.eventHandler)
+      handler <- ZIO.access[EventHandler](_.get)
       _       <- putStrLn("Processing Event: " + evt.toString)
       _       <- handler.handle(evt)
     } yield ()
 
   def messageProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      api <- ZIO.access[Api](_.api)
+      api <- ZIO.access[Api](_.get)
       msg <- api.dequeueParsedMessage()
       evt <- Event.fromIrcMessage(msg)
       _   <- api.enqueueEvent(evt)

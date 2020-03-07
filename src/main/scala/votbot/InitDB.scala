@@ -1,5 +1,7 @@
 package votbot
 
+import votbot.Configuration.Configuration
+import votbot.database.Database.Database
 import votbot.database.{ Database, DefaultDatabase }
 import votbot.model.DB.ChannelPrefs
 import votbot.model.irc.ChannelKey
@@ -9,17 +11,12 @@ import zio.system._
 
 object InitDB extends App {
 
-  def mkEnvironment: ZIO[Any, Throwable, Database with System] =
-    ZIO.effect(
-      new Database with System.Live {
-        override val database: Database.Service[Any] = new DefaultDatabase
-      }
-    )
+  val env = System.live ++ Database.defaultDatabase ++ Configuration.defaultConfig
 
-  def main: ZIO[Database with System, Serializable, Unit] =
+  def main: ZIO[Configuration with Database with System, Serializable, Unit] =
     for {
-      cfg <- Main.readConfig()
-      db  <- ZIO.access[Database](_.database)
+      cfg <- ZIO.access[Configuration](_.get)
+      db  <- ZIO.access[Database](_.get)
       _   <- db.quotesRepo.createSchemaIfNotExists
       _   <- db.channelSettingsRepo.createSchemaIfNotExists
       _   <- db.channelHandlersRepo.createSchemaIfNotExists
@@ -29,5 +26,5 @@ object InitDB extends App {
     } yield ()
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] =
-    main.provideSomeM(mkEnvironment).either.map(_.fold(e => { println(e); 1 }, _ => 0))
+    main.provideSomeLayer(env).either.map(_.fold(e => { println(e); 1 }, _ => 0))
 }

@@ -2,10 +2,11 @@ package votbot
 
 import java.nio.charset.StandardCharsets
 
-import votbot.Main.VotbotEnv
+import votbot.Api.Api
+import votbot.Configuration.Configuration
 import votbot.event.Event.Connected
 import votbot.model.irc.Message
-import zio.console.putStrLn
+import zio.console.{ Console, putStrLn }
 import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
 import zio.nio.core.{ InetSocketAddress, SocketAddress }
@@ -14,9 +15,9 @@ import zio.{ Chunk, Schedule, Task, ZIO }
 object Client {
   val maxMessageLength = 512
 
-  def make(): ZIO[VotbotEnv, Exception, Unit] =
+  def make() =
     for {
-      config <- ZIO.access[Configuration](_.configuration.config)
+      config <- ZIO.access[Configuration](_.get.config)
       _ <- AsynchronousSocketChannel()
             .use { channel =>
               for {
@@ -28,13 +29,13 @@ object Client {
             .retry(Schedule.spaced(5.seconds))
     } yield ()
 
-  def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[VotbotEnv, Exception, Unit] =
+  def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[Api with Console, Exception, Unit] =
     for {
       _        <- putStrLn("connecting to: " + addr.toString())
       _        <- channel.connect(addr)
       mbRemote <- channel.remoteAddress
       remote   <- ZIO.fromOption(mbRemote).mapError(_ => new Exception("Not connected"))
-      _        <- ZIO.accessM[Api](_.api.enqueueEvent(Connected(remote)))
+      _        <- ZIO.accessM[Api](_.get.enqueueEvent(Connected(remote)))
       reader   <- reader(channel).fork
       writer   <- writer(channel).fork
       _        <- reader.zip(writer).await
@@ -43,22 +44,25 @@ object Client {
   def reader(
     channel: AsynchronousSocketChannel,
     rem: String = ""
-  ): ZIO[VotbotEnv, Throwable, Unit] =
+  ): ZIO[Api, Throwable, Unit] =
     for {
       chunk        <- channel.read(maxMessageLength)
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _            <- ZIO.foreach(valid)(v => Api.>.enqueueReceived(v))
+      _            <- ZIO.foreach(valid)(v => ZIO.access[Api](_.get.enqueueReceived(v)))
       _            <- reader(channel, rem.mkString(""))
     } yield ()
 
   private def split(str: String): Task[(Array[String], Array[String])] =
     ZIO.effect(str.split("(?<=\r\n)").filter(_.nonEmpty).span(_.endsWith("\r\n")))
 
-  def writer(channel: AsynchronousSocketChannel, rem: Chunk[Byte] = Chunk.empty): ZIO[VotbotEnv, Throwable, Unit] =
+  def writer(
+    channel: AsynchronousSocketChannel,
+    rem: Chunk[Byte] = Chunk.empty
+  ): ZIO[Api with Console, Throwable, Unit] =
     for {
-      msg      <- ZIO.accessM[Api](_.api.dequeueOutMessage())
+      msg      <- ZIO.accessM[Api](_.get.dequeueOutMessage())
       msgBytes <- Message.toByteArray(msg)
       chunk    = rem ++ Chunk.fromArray(msgBytes)
       remN     <- channel.write(chunk)

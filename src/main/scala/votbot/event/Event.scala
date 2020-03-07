@@ -1,6 +1,6 @@
 package votbot.event
 
-import votbot.BotState
+import votbot.BotState.BotState
 import votbot.Main.VotbotEnv
 import votbot.model.irc._
 import zio.ZIO
@@ -10,6 +10,7 @@ sealed trait Event extends Serializable with Product
 
 object Event {
   type HandleFunction = PartialFunction[Event, ZIO[VotbotEnv, Throwable, Unit]]
+
   val emptyHandleFunction: HandleFunction = { case _ => ZIO.unit }
   final case class Handler(name: String, handleFunction: HandleFunction)
 
@@ -42,7 +43,7 @@ object Event {
 
   def fromIrcMessage(ircMsg: Message): ZIO[BotState, Throwable, Event] =
     for {
-      state          <- ZIO.access[BotState](_.botState)
+      state          <- ZIO.access[BotState](_.get)
       currentNick    <- state.currentNick()
       isExtendedJoin <- state.isCapabilityEnabled(Capabilities.ExtendedJoin)
       event = ircMsg match {

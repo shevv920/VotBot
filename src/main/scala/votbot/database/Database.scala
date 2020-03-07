@@ -1,25 +1,25 @@
 package votbot.database
 
 import slick.basic.BasicBackend
-import zio.Task
-
-trait Database {
-  val database: Database.Service[Any]
-}
+import zio.ZLayer.NoDeps
+import zio.{ Has, Task, ZLayer }
 
 object Database {
+  type Database = Has[Database.Service]
 
-  trait Service[R] {
-    def databaseProvider: DatabaseProvider.Service[R]
+  trait Service {
+    def databaseProvider: DatabaseProvider.Service
     def channelSettingsRepo: ChannelSettingsRepo
     def channelHandlersRepo: ChannelHandlersRepo
     def quotesRepo: QuotesRepo
   }
+
+  val defaultDatabase: NoDeps[Nothing, Database] = ZLayer.succeed(new DefaultDatabase)
 }
 
-class DefaultDatabase extends Database.Service[Any] {
-  override val databaseProvider: DatabaseProvider.Service[Any] = new SQLiteDatabaseProvider
-  implicit val dbTask: Task[BasicBackend#DatabaseDef]          = databaseProvider.db
+class DefaultDatabase extends Database.Service {
+  override val databaseProvider: DatabaseProvider.Service = new SQLiteDatabaseProvider
+  implicit val dbTask: Task[BasicBackend#DatabaseDef]     = databaseProvider.db
 
   override val channelHandlersRepo: ChannelHandlersRepo = new SQLiteChannelHandlersRepo
   override val channelSettingsRepo: ChannelSettingsRepo = new SQLiteChannelSettingsRepo

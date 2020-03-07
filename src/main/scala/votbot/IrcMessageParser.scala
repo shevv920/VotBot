@@ -1,5 +1,6 @@
 package votbot
 
+import votbot.Api.Api
 import votbot.model.irc.Command.Unknown
 import votbot.model.irc.{ Command, Message, Prefix }
 import zio.console._
@@ -55,7 +56,7 @@ object IrcMessageParser {
 
   def parser(): ZIO[Api with Console, Throwable, Unit] =
     for {
-      api        <- ZIO.access[Api](_.api)
+      api        <- ZIO.access[Api](_.get)
       raw        <- api.dequeueReceived()
       _          <- putStrLn("Got to parse: " + raw)
       ircMessage <- parse(raw)
