@@ -16,13 +16,13 @@ resolvers +=
 libraryDependencies ++= Seq(
   "dev.zio"                      %% "zio"        % zioVersion,
   "dev.zio"                      %% "zio-nio"    % zioNioVersion,
-  "com.github.pureconfig"        %% "pureconfig" % "0.12.2",
-  "com.beachape"                 %% "enumeratum" % "1.5.14",
-  "org.xerial"                   % "sqlite-jdbc" % "3.28.0",
+  "com.github.pureconfig"        %% "pureconfig" % "0.12.3",
+  "com.beachape"                 %% "enumeratum" % "1.5.15",
+  "org.xerial"                   % "sqlite-jdbc" % "3.30.1",
   "com.typesafe.slick"           %% "slick"      % "3.3.2",
   "org.slf4j"                    % "slf4j-nop"   % "1.6.4",
-  "com.softwaremill.sttp.client" %% "core"       % "2.0.0-RC5",
-  "org.jsoup"                    % "jsoup"       % "1.12.1",
+  "com.softwaremill.sttp.client" %% "core"       % "2.0.0",
+  "org.jsoup"                    % "jsoup"       % "1.13.1",
   // "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % "2.0.0-RC5",
   "dev.zio" %% "zio-test"     % zioVersion % "test",
   "dev.zio" %% "zio-test-sbt" % zioVersion % "test"
