@@ -72,9 +72,9 @@ object Event {
             .split(" ")
             .map {
               case n if n.startsWith("@") =>
-                (n.drop(1), List(ChannelMode.o(UserKey(n.drop(1)))))
+                (n.drop(1), List(ChannelMode.Op(UserKey(n.drop(1)))))
               case n if n.startsWith("+") =>
-                (n.drop(1), List(ChannelMode.v(UserKey(n.drop(1)))))
+                (n.drop(1), List(ChannelMode.Voice(UserKey(n.drop(1)))))
               case n =>
                 (n, List.empty)
             }
