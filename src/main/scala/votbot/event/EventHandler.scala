@@ -1,5 +1,6 @@
 package votbot.event
 
+import votbot.{ Api, BotState, Configuration }
 import votbot.Api.Api
 import votbot.BotState.BotState
 import votbot.Configuration.Configuration
@@ -7,7 +8,6 @@ import votbot.database.Database
 import votbot.database.Database.Database
 import votbot.event.Event._
 import votbot.model.irc._
-import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
 import zio.{ Has, IO, ZIO, ZLayer }
 
@@ -32,10 +32,15 @@ object EventHandler {
     def handleFunction: PartialFunction[Event, IO[Throwable, Unit]]
   }
 
-  val defaultEventHandler: ZLayer[Has[Api.Service] with Has[Configuration.Service] with Has[Database.Service] with Has[
-    BotState.Service
-  ] with Has[Random.Service], Nothing, Has[Service]] =
-    ZLayer.fromServices(
+  val defaultEventHandler =
+    ZLayer.fromServices[
+      Api.Service,
+      Configuration.Service,
+      Database.Service,
+      BotState.Service,
+      Random.Service,
+      EventHandler.Service
+    ] {
       (
         api: Api.Service,
         cfg: Configuration.Service,
@@ -43,7 +48,7 @@ object EventHandler {
         botState: BotState.Service,
         random: Random.Service
       ) =>
-        new Service {
+        new EventHandler.Service {
 
           val handlerFunctions = List(
             onWelcome,
@@ -78,7 +83,9 @@ object EventHandler {
               val capLsCmd = Message(Command.CapLs)
               val nickCmd  = Message(Command.Nick, cfg.bot.nick)
               val userCmd  = Message(Command.User, cfg.bot.userName, "*", "*", cfg.bot.realName)
-              api.enqueueOutMessage(capLsCmd) *> api.enqueueOutMessage(nickCmd) *> api.enqueueOutMessage(userCmd)
+              api.enqueueOutMessage(capLsCmd) *> api.enqueueOutMessage(nickCmd) *> api.enqueueOutMessage(
+                userCmd
+              )
           }
 
           override def onWelcome: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
@@ -99,7 +106,8 @@ object EventHandler {
           override def onJoin: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
             case BotJoin(chName) =>
               for {
-                _ <- api.addChannel(Channel(chName, List.empty, Set.empty, Set.empty, PartialFunction.empty)) //fixme
+                _ <- api
+                      .addChannel(Channel(chName, List.empty, Set.empty, Set.empty, PartialFunction.empty)) //fixme
               } yield ()
 
             case Join(userKey, channel) =>
@@ -201,6 +209,6 @@ object EventHandler {
               } yield ()
           }
         }
-    )
 
+    }
 }

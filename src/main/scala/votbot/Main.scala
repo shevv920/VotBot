@@ -8,7 +8,6 @@ import votbot.database.Database
 import votbot.database.Database.Database
 import votbot.event.EventHandler.EventHandler
 import votbot.event.{ Event, EventHandler }
-import zio.ZLayer.NoDeps
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -18,12 +17,6 @@ import zio.system.System
 
 object Main extends App {
 
-  val baseLayer = Console.live ++
-    Clock.live ++
-    Blocking.live ++
-    Random.live ++
-    System.live
-
   type VotbotEnv = Any
     with Console
     with Clock
@@ -31,27 +24,41 @@ object Main extends App {
     with Configuration
     with BotState
     with Api
-    with EventHandler
     with Blocking
     with HttpClient
     with Database
 
-  val config: ZLayer[Any, Any, Configuration]  = baseLayer >>> Configuration.defaultConfig
-  val botState: ZLayer[Any, Any, BotState]     = config >>> BotState.defaultBotState
-  val api: NoDeps[Nothing, Api]                = Api.defaultApi
-  val httpClient: ZLayer[Any, Any, HttpClient] = config >>> HttpClient.defaultHttpClient
-  val database: NoDeps[Nothing, Database]      = Database.defaultDatabase
+  private val system   = System.live
+  private val clock    = Clock.live
+  private val blocking = Blocking.live
+  private val console  = Console.live
+  private val random   = Random.live
 
-  val eventHandler = (baseLayer ++ config ++ botState ++ api ++ httpClient ++ database) >>> EventHandler.defaultEventHandler
-  val votBotEnv    = baseLayer ++ config ++ botState ++ api ++ httpClient ++ database ++ eventHandler
+  private val config     = system >>> Configuration.defaultConfig
+  private val botState   = config >>> BotState.defaultBotState
+  private val httpClient = config >>> HttpClient.defaultHttpClient
+  private val api        = Api.defaultApi
+  private val database   = Database.defaultDatabase
+
+  private val votBotEnv = console ++
+    blocking ++
+    clock ++
+    random ++
+    system ++
+    config ++
+    botState ++
+    api ++
+    httpClient ++
+    database
+  private val eventHandler = (api ++ config ++ database ++ botState ++ random) >>> EventHandler.defaultEventHandler
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
     mainLogic(args)
-      .provideCustomLayer(votBotEnv)
+      .provideCustomLayer(votBotEnv ++ eventHandler)
       .either
       .map(_.fold(e => { println(e); 1 }, _ => 0))
 
-  def mainLogic(args: List[String]): ZIO[VotbotEnv, Serializable, Unit] =
+  def mainLogic(args: List[String]): ZIO[VotbotEnv with EventHandler, Serializable, Unit] =
     for {
       client         <- Client.make().fork
       parser         <- IrcMessageParser.parser().forever.fork
@@ -65,7 +72,7 @@ object Main extends App {
       _              <- consoleControl.interrupt
     } yield ()
 
-  def eventProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
+  def eventProcessor(): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
       api     <- ZIO.access[Api](_.get)
       evt     <- api.dequeueEvent()
