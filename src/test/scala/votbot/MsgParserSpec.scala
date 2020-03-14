@@ -10,7 +10,7 @@ object MsgParserSpec {
     testM("should parse simple PRIVMSG") {
       IrcMessageParser
         .parse("PRIVMSG votbot message")
-        .map(m => assert(m)(equalTo(Message(Command.Privmsg, List("votbot")))))
+        .map(m => assert(m)(equalTo(Message(Command.Privmsg, List("votbot", "message")))))
     },
     testM("should parse numeric msg") {
       IrcMessageParser

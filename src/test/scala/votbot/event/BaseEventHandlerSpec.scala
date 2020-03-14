@@ -1,5 +1,6 @@
 package votbot.event
 
+import votbot.Api
 import votbot.Api.Api
 import votbot.event.Event._
 import votbot.event.EventHandler.EventHandler
@@ -14,25 +15,23 @@ object BaseEventHandlerSpec {
   val tests = suite("BaseEventHandler")(
     testM("response for ping request with/with no args ") {
       for {
-        api         <- ZIO.access[Api](_.get)
         handler     <- ZIO.access[EventHandler](_.get)
         evt         = Ping(None)
         args        = "irc.foo.net"
         evtWithArgs = Ping(Some(args))
         _           <- handler.handle(evt)
         _           <- handler.handle(evtWithArgs)
-        pongNoArgs  <- api.dequeueOutMessage()
-        pongArgs    <- api.dequeueOutMessage()
+        pongNoArgs  <- Api.dequeueOutMessage()
+        pongArgs    <- Api.dequeueOutMessage()
       } yield assert(pongNoArgs)(equalTo(Message(Command.Pong))) &&
         assert(pongArgs)(equalTo(Message(Command.Pong, List(args))))
     },
     testM("send nick and user commands on Connected Event") {
       for {
-        api     <- ZIO.access[Api](_.get)
         handler <- ZIO.access[EventHandler](_.get)
         addr    <- SocketAddress.inetSocketAddress(1234)
         _       <- handler.handle(Connected(addr))
-        all     <- api.dequeueAllOutMessages()
+        all     <- Api.dequeueAllOutMessages()
       } yield assert(all.count(c => c.cmd == Command.Nick || c.cmd == Command.User))(equalTo(2))
     },
     testM("BotJoin creates channel") {
