@@ -5,8 +5,8 @@ version := "0.2"
 scalaVersion := "2.13.1"
 scalacOptions += "-Ymacro-annotations"
 
-lazy val zioVersion    = "1.0.0-RC18-1"
-lazy val zioNioVersion = "1.0.0-RC4"
+lazy val zioVersion    = "1.0.0-RC18-2"
+lazy val zioNioVersion = "1.0.0-RC5"
 
 packResourceDir += (baseDirectory.value / "src" / "main" / "resources" -> "")
 mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".conf")) }
