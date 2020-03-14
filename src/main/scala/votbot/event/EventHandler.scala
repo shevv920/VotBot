@@ -1,13 +1,9 @@
 package votbot.event
 
-import votbot.{ Api, BotState, Configuration }
-import votbot.Api.Api
-import votbot.BotState.BotState
-import votbot.Configuration.Configuration
 import votbot.database.Database
-import votbot.database.Database.Database
 import votbot.event.Event._
 import votbot.model.irc._
+import votbot.{ Api, BotState, Configuration }
 import zio.random.Random
 import zio.{ Has, IO, ZIO, ZLayer }
 
@@ -31,6 +27,9 @@ object EventHandler {
 
     def handleFunction: PartialFunction[Event, IO[Throwable, Unit]]
   }
+
+  def handle(event: Event): ZIO[EventHandler, Throwable, Unit] =
+    ZIO.accessM[EventHandler](_.get.handle(event))
 
   val defaultEventHandler =
     ZLayer.fromServices[
@@ -107,7 +106,7 @@ object EventHandler {
             case BotJoin(chName) =>
               for {
                 _ <- api
-                      .addChannel(Channel(chName, List.empty, Set.empty, Set.empty, PartialFunction.empty)) //fixme
+                      .addChannel(Channel(chName, List.empty, Set.empty, Set.empty, Event.emptyHandleFunction)) //fixme
               } yield ()
 
             case Join(userKey, channel) =>
@@ -116,6 +115,7 @@ object EventHandler {
                 _    <- api.addUserToChannel(channel, user)
                 _    <- api.addChannelToUser(channel, userKey)
               } yield ()
+
             case ExtendedJoin(name, channel, accountName) =>
               for {
                 _ <- api.enqueueEvent(Join(name, channel))

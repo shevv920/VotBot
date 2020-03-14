@@ -15,13 +15,13 @@ object InitDB extends App {
 
   def main: ZIO[Configuration with Database with System, Serializable, Unit] =
     for {
-      cfg <- ZIO.access[Configuration](_.get)
-      db  <- ZIO.access[Database](_.get)
-      _   <- db.quotesRepo.createSchemaIfNotExists
-      _   <- db.channelSettingsRepo.createSchemaIfNotExists
-      _   <- db.channelHandlersRepo.createSchemaIfNotExists
+      botCfg <- Configuration.bot
+      db     <- ZIO.access[Database](_.get)
+      _      <- db.quotesRepo.createSchemaIfNotExists
+      _      <- db.channelSettingsRepo.createSchemaIfNotExists
+      _      <- db.channelHandlersRepo.createSchemaIfNotExists
 
-      autoJoinChannelsPrefs = cfg.bot.autoJoinChannels.map(c => ChannelPrefs(ChannelKey(c), autoJoin = true))
+      autoJoinChannelsPrefs = botCfg.autoJoinChannels.map(c => ChannelPrefs(ChannelKey(c), autoJoin = true))
       _                     <- db.channelSettingsRepo.insertAll(autoJoinChannelsPrefs)
     } yield ()
 

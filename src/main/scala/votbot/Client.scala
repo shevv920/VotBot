@@ -17,7 +17,7 @@ object Client {
 
   def make() =
     for {
-      config <- ZIO.access[Configuration](_.get.config)
+      config <- Configuration.config
       _ <- AsynchronousSocketChannel()
             .use { channel =>
               for {
@@ -44,14 +44,16 @@ object Client {
   def reader(
     channel: AsynchronousSocketChannel,
     rem: String = ""
-  ): ZIO[Api, Throwable, Unit] =
+  ): ZIO[Api with Console, Throwable, Unit] =
     for {
       chunk        <- channel.read(maxMessageLength)
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _            <- ZIO.foreach(valid)(v => ZIO.access[Api](_.get.enqueueReceived(v)))
-      _            <- reader(channel, rem.mkString(""))
+      _ <- ZIO.foreach(valid) { v =>
+            ZIO.accessM[Api](_.get.enqueueReceived(v))
+          }
+      _ <- reader(channel, rem.mkString(""))
     } yield ()
 
   private def split(str: String): Task[(Array[String], Array[String])] =

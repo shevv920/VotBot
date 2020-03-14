@@ -31,7 +31,11 @@ object Configuration {
     def bot: BotProps
   }
 
-  def bot: URIO[Configuration, BotProps] = ZIO.access[Configuration](_.get.bot)
+  def bot: URIO[Configuration, BotProps]  = ZIO.access[Configuration](_.get.bot)
+  def config: URIO[Configuration, Config] = ZIO.access[Configuration](_.get.config)
+  def http: URIO[Configuration, Http]     = ZIO.access[Configuration](_.get.http)
+  def server: URIO[Configuration, Server] = ZIO.access[Configuration](_.get.server)
+  def admin: URIO[Configuration, Admin]   = ZIO.access[Configuration](_.get.admin)
 
   private def mkCfgPath() =
     system

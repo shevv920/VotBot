@@ -58,7 +58,7 @@ object Main extends App {
       .either
       .map(_.fold(e => { println(e); 1 }, _ => 0))
 
-  def mainLogic(args: List[String]): ZIO[VotbotEnv with EventHandler, Serializable, Unit] =
+  def mainLogic(args: List[String]): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
       client         <- Client.make().fork
       parser         <- IrcMessageParser.parser().forever.fork
@@ -74,18 +74,15 @@ object Main extends App {
 
   def eventProcessor(): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
-      api     <- ZIO.access[Api](_.get)
-      evt     <- api.dequeueEvent()
-      handler <- ZIO.access[EventHandler](_.get)
-      _       <- putStrLn("Processing Event: " + evt.toString)
-      _       <- handler.handle(evt)
+      evt <- Api.dequeueEvent()
+      _   <- putStrLn("Processing Event: " + evt.toString)
+      _   <- EventHandler.handle(evt)
     } yield ()
 
   def messageProcessor(): ZIO[VotbotEnv, Throwable, Unit] =
     for {
-      api <- ZIO.access[Api](_.get)
-      msg <- api.dequeueParsedMessage()
+      msg <- Api.dequeueParsedMessage()
       evt <- Event.fromIrcMessage(msg)
-      _   <- api.enqueueEvent(evt)
+      _   <- Api.enqueueEvent(evt)
     } yield ()
 }

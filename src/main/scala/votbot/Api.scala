@@ -48,6 +48,33 @@ object Api {
     def deregisterChannelHandler(channelKey: ChannelKey, handler: Event.Handler): IO[Throwable, Unit]
   }
 
+  def enqueueEvent(evt: Event): ZIO[Api, Nothing, Unit] =
+    ZIO.accessM[Api](_.get.enqueueEvent(evt))
+
+  def enqueueParsed(msg: Message): ZIO[Api, Nothing, Unit] =
+    ZIO.accessM[Api](_.get.enqueueParsed(msg))
+
+  def enqueueReceived(raw: String): ZIO[Api, Nothing, Unit] =
+    ZIO.accessM[Api](_.get.enqueueReceived(raw))
+
+  def enqueueOutMessage(msg: Message): ZIO[Api, Nothing, Unit] =
+    ZIO.accessM[Api](_.get.enqueueOutMessage(msg))
+
+  def dequeueEvent(): ZIO[Api, Nothing, Event] =
+    ZIO.accessM[Api](_.get.dequeueEvent())
+
+  def dequeueReceived(): ZIO[Api, Nothing, String] =
+    ZIO.accessM[Api](_.get.dequeueReceived())
+
+  def dequeueOutMessage(): ZIO[Api, Nothing, Message] =
+    ZIO.accessM[Api](_.get.dequeueOutMessage())
+
+  def dequeueAllOutMessages(): ZIO[Api, Nothing, List[Message]] =
+    ZIO.accessM[Api](_.get.dequeueAllOutMessages())
+
+  def dequeueParsedMessage(): ZIO[Api, Nothing, Message] =
+    ZIO.accessM[Api](_.get.dequeueParsedMessage())
+
   val defaultApi: ZLayer.NoDeps[Nothing, Api] = ZLayer.fromEffect {
     for {
       rcvdQ      <- Queue.unbounded[String]
