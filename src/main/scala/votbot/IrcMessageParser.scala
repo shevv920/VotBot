@@ -56,7 +56,6 @@ object IrcMessageParser {
 
   def parser(): ZIO[Api with Console, Throwable, Unit] =
     for {
-      _          <- putStrLn("trying to get next rcvd msg...")
       raw        <- Api.dequeueReceived()
       _          <- putStrLn("Got to parse: " + raw)
       ircMessage <- parse(raw)
