@@ -5,8 +5,7 @@ import votbot.database.Database.Database
 import votbot.database.{ Database, DefaultDatabase }
 import votbot.model.DB.ChannelPrefs
 import votbot.model.irc.ChannelKey
-import zio.ZIO
-import zio.App
+import zio.{ App, ExitCode, ZIO }
 import zio.system._
 
 object InitDB extends App {
@@ -25,6 +24,6 @@ object InitDB extends App {
       _                     <- db.channelSettingsRepo.insertAll(autoJoinChannelsPrefs)
     } yield ()
 
-  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] =
-    main.provideSomeLayer(env).either.map(_.fold(e => { println(e); 1 }, _ => 0))
+  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, ExitCode] =
+    main.provideSomeLayer(env).either.map(_.fold(e => { println(e); ExitCode.failure }, _ => ExitCode.success))
 }

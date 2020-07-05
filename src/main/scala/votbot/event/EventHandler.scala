@@ -178,7 +178,7 @@ object EventHandler {
           override def onNumeric: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
             case Numeric(NumericCommand.ERR_NICKNAMEINUSE, _, _) =>
               for {
-                n       <- random.nextInt(99)
+                n       <- random.nextInt
                 newNick = cfg.bot.nick + n
                 _       <- api.enqueueOutMessage(Message(Command.Nick, newNick))
                 _       <- botState.setNick(newNick)

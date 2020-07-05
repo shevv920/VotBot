@@ -52,11 +52,11 @@ object Main extends App {
     database
   private val eventHandler = (api ++ config ++ database ++ botState ++ random) >>> EventHandler.defaultEventHandler
 
-  override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
+  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     mainLogic(args)
       .provideCustomLayer(votBotEnv ++ eventHandler)
       .either
-      .map(_.fold(e => { println(e); 1 }, _ => 0))
+      .map(_.fold(e => { println(e); ExitCode.failure }, _ => ExitCode.success))
 
   def mainLogic(args: List[String]): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
