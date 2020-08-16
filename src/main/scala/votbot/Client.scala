@@ -50,8 +50,8 @@ object Client {
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _ <- ZIO.foreach(valid) { v =>
-            ZIO.accessM[Api](_.get.enqueueReceived(v))
+      _ <- ZIO.foreach(valid.toList) { v =>
+            ZIO.accessM[Api](_.get.enqueueReceived((v)))
           }
       _ <- reader(channel, rem.mkString(""))
     } yield ()
