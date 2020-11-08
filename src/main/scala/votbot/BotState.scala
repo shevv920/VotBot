@@ -18,14 +18,12 @@ object BotState {
     def isCapabilityEnabled(cap: Capability): Task[Boolean]
   }
 
-  val defaultBotState: ZLayer[Configuration, Nothing, BotState] = ZLayer.fromEffect(
-    for {
-      bot <- Configuration.bot
-      st  <- Ref.make(State(bot.nick))
-    } yield new DefaultBotState {
-      override protected val state: Ref[State] = st
-    }
-  )
+  val defaultBotState: ZLayer[Configuration, Nothing, BotState] = (for {
+    bot <- Configuration.bot
+    st  <- Ref.make(State(bot.nick))
+  } yield new DefaultBotState {
+    override protected val state: Ref[State] = st
+  }).toLayer
 }
 
 trait DefaultBotState extends BotState.Service {

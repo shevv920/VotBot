@@ -10,7 +10,7 @@ import zio.system._
 
 object InitDB extends App {
 
-  val env = System.live ++ Database.defaultDatabase ++ Configuration.defaultConfig
+  private val env = System.live ++ Database.defaultDatabase ++ Configuration.defaultConfig
 
   def main: ZIO[Configuration with Database with System, Serializable, Unit] =
     for {

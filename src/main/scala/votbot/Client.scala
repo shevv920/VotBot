@@ -6,6 +6,7 @@ import votbot.Api.Api
 import votbot.Configuration.Configuration
 import votbot.event.Event.Connected
 import votbot.model.irc.Message
+import zio.clock.Clock
 import zio.console.{ Console, putStrLn }
 import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
@@ -15,7 +16,7 @@ import zio.{ Chunk, Schedule, Task, ZIO }
 object Client {
   val maxMessageLength = 512
 
-  def make() =
+  def make(): ZIO[Api with Console with Configuration with Clock, Exception, Unit] =
     for {
       config <- Configuration.config
       _ <- AsynchronousSocketChannel()
@@ -51,7 +52,7 @@ object Client {
       res          <- split(str)
       (valid, rem) = res
       _ <- ZIO.foreach_(valid.toList) { v =>
-            ZIO.accessM[Api](_.get.enqueueReceived((v)))
+            ZIO.accessM[Api](_.get.enqueueReceived(v))
           }
       _ <- reader(channel, rem.mkString(""))
     } yield ()

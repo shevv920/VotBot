@@ -61,7 +61,7 @@ object Configuration {
 
 class TestConfiguration extends Configuration.Service {
 
-  val config = Config(
+  val config: Config = Config(
     debug = true,
     Server("irc.freenode.net", 6667, None),
     BotProps("votbot", "uname", "realName", List("#votbot"), "VOTBOT"),

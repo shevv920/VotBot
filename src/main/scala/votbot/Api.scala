@@ -75,23 +75,21 @@ object Api {
   def dequeueParsedMessage(): ZIO[Api, Nothing, Message] =
     ZIO.accessM[Api](_.get.dequeueParsedMessage())
 
-  val defaultApi: ZLayer.NoDeps[Nothing, Api] = ZLayer.fromEffect {
-    for {
-      rcvdQ      <- Queue.unbounded[String]
-      parsedMsgQ <- Queue.unbounded[Message]
-      outMsgQ    <- Queue.unbounded[Message]
-      evtQ       <- Queue.unbounded[Event]
-      kChannels  <- Ref.make[Map[ChannelKey, Channel]](Map.empty)
-      kUsers     <- Ref.make[Map[UserKey, User]](Map.empty)
-    } yield new DefaultApi {
-      override protected val receivedQ: Queue[String]                     = rcvdQ
-      override protected val parsedMessageQ: Queue[Message]               = parsedMsgQ
-      override protected val outMessageQ: Queue[Message]                  = outMsgQ
-      override protected val eventQ: Queue[Event]                         = evtQ
-      override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = kChannels
-      override protected val knownUsers: Ref[Map[UserKey, User]]          = kUsers
-    }
-  }
+  val defaultApi: Layer[Nothing, Api] = (for {
+    rcvdQ      <- Queue.unbounded[String]
+    parsedMsgQ <- Queue.unbounded[Message]
+    outMsgQ    <- Queue.unbounded[Message]
+    evtQ       <- Queue.unbounded[Event]
+    kChannels  <- Ref.make[Map[ChannelKey, Channel]](Map.empty)
+    kUsers     <- Ref.make[Map[UserKey, User]](Map.empty)
+  } yield new DefaultApi {
+    override protected val receivedQ: Queue[String]                     = rcvdQ
+    override protected val parsedMessageQ: Queue[Message]               = parsedMsgQ
+    override protected val outMessageQ: Queue[Message]                  = outMsgQ
+    override protected val eventQ: Queue[Event]                         = evtQ
+    override protected val knownChannels: Ref[Map[ChannelKey, Channel]] = kChannels
+    override protected val knownUsers: Ref[Map[UserKey, User]]          = kUsers
+  }).toLayer
 }
 
 trait DefaultApi extends Api.Service {
@@ -146,7 +144,7 @@ trait DefaultApi extends Api.Service {
       newUser = oldUser.copy(name = newNick, accountName = None)
       _       <- addUser(newUser)
       _       <- removeUser(oldUser)
-      _       <- ZIO.foreach(newUser.channels)(ch => addUserToChannel(ch, newUser))
+      _       <- ZIO.foreach_(newUser.channels)(ch => addUserToChannel(ch, newUser))
     } yield ()
 
   override def queryAccByNick(name: String): IO[Throwable, Unit] =
@@ -178,7 +176,7 @@ trait DefaultApi extends Api.Service {
       users <- knownUsers.get
       user <- ZIO
                .fromOption(users.get(uKey))
-               .mapError(_ => new Exception("User does not exists " + uKey))
+               .orElseFail(new Exception("User does not exists " + uKey))
     } yield user
 
   override def findUser(name: String): IO[Throwable, Option[User]] =
@@ -199,7 +197,7 @@ trait DefaultApi extends Api.Service {
 
   override def removeUser(user: User): IO[Throwable, Unit] =
     for {
-      _ <- ZIO.foreach(user.channels) { chName =>
+      _ <- ZIO.foreach_(user.channels) { chName =>
             removeChannelMember(chName, UserKey(user.name))
           }
       _ <- knownUsers.update(u => u - UserKey(user.name))
@@ -235,7 +233,7 @@ trait DefaultApi extends Api.Service {
       channels <- knownChannels.get
       channel <- ZIO
                   .fromOption(channels.get(chName))
-                  .mapError(_ => new Exception("Channel does not exist: " + chName))
+                  .orElseFail(new Exception("Channel does not exist: " + chName))
     } yield channel
 
   override def removeChannel(channelName: ChannelKey): UIO[Unit] =

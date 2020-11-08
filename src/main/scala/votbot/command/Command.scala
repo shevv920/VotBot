@@ -57,7 +57,7 @@ object Command {
 
   def run(cmd: Command): ZIO[Console with Api, Throwable, Unit] =
     for {
-      api <- ZIO.access[Api](_.get)
+      api <- ZIO.service[Api.Service]
       _ <- ZIO.whenCase(cmd) {
             case LeaveChannel(channel, reason) =>
               api.leaveChannel(channel, reason)
