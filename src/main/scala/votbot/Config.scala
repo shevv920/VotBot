@@ -3,8 +3,7 @@ package votbot
 import java.nio.file.Paths
 
 import pureconfig.ConfigSource
-import zio.ZLayer.NoDeps
-import zio.{ Has, URIO, ZIO, ZLayer, system }
+import zio.{ Has, ULayer, URIO, ZIO, ZLayer, system }
 import pureconfig.generic.auto._
 
 case class Config(debug: Boolean, server: Server, bot: BotProps, admin: Admin, http: Http)
@@ -44,7 +43,7 @@ object Configuration {
       .map(Paths.get(_))
 
   val defaultConfig: ZLayer[system.System, Serializable, Configuration] =
-    ZLayer.fromEffect(for {
+    (for {
       path <- mkCfgPath()
       cfg <- ZIO
               .fromEither(ConfigSource.file(path).load[Config])
@@ -55,9 +54,9 @@ object Configuration {
       override val server: Server = cfg.server
       override val admin: Admin   = cfg.admin
       override val bot: BotProps  = cfg.bot
-    })
+    }).toLayer
 
-  val testConfiguration: NoDeps[Nothing, Has[TestConfiguration]] = ZLayer.succeed(new TestConfiguration)
+  val testConfiguration: ULayer[Has[TestConfiguration]] = ZLayer.succeed(new TestConfiguration)
 }
 
 class TestConfiguration extends Configuration.Service {

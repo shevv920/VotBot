@@ -34,7 +34,7 @@ object Client {
       _        <- putStrLn("connecting to: " + addr.toString())
       _        <- channel.connect(addr)
       mbRemote <- channel.remoteAddress
-      remote   <- ZIO.fromOption(mbRemote).mapError(_ => new Exception("Not connected"))
+      remote   <- ZIO.fromOption(mbRemote).orElseFail(new Exception("Not connected"))
       _        <- ZIO.accessM[Api](_.get.enqueueEvent(Connected(remote)))
       reader   <- reader(channel).fork
       writer   <- writer(channel).fork
@@ -46,11 +46,11 @@ object Client {
     rem: String = ""
   ): ZIO[Api with Console, Throwable, Unit] =
     for {
-      chunk        <- channel.read(maxMessageLength)
+      chunk        <- channel.readChunk(maxMessageLength)
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _ <- ZIO.foreach(valid.toList) { v =>
+      _ <- ZIO.foreach_(valid.toList) { v =>
             ZIO.accessM[Api](_.get.enqueueReceived((v)))
           }
       _ <- reader(channel, rem.mkString(""))
@@ -67,7 +67,7 @@ object Client {
       msg      <- ZIO.accessM[Api](_.get.dequeueOutMessage())
       msgBytes <- Message.toByteArray(msg)
       chunk    = rem ++ Chunk.fromArray(msgBytes)
-      remN     <- channel.write(chunk)
+      remN     <- channel.writeChunk(chunk)
       rem      = chunk.drop(remN)
       _        <- putStrLn("Written: " + new String(msgBytes, StandardCharsets.UTF_8) + " remaining: " + rem.length)
       _        <- writer(channel, rem)
