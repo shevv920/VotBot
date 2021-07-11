@@ -9,8 +9,8 @@ lazy val zioVersion    = "1.0.9"
 lazy val zioNioVersion = "1.0.0-RC11"
 
 packResourceDir += (baseDirectory.value / "src" / "main" / "resources" -> "")
-mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".conf")) }
-mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith(".txt")) }
+Compile / packageBin / mappings ~= { _.filter(!_._1.getName.endsWith(".conf")) }
+Compile / packageBin / mappings ~= { _.filter(!_._1.getName.endsWith(".txt")) }
 resolvers +=
   "Sonatype OSS Snapshots".at("https://oss.sonatype.org/content/repositories/snapshots")
 libraryDependencies ++= Seq(

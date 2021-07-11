@@ -6,7 +6,7 @@ import votbot.event.Event._
 import votbot.event.EventHandler.EventHandler
 import votbot.model.irc._
 import zio.ZIO
-import zio.nio.core.SocketAddress
+import zio.nio.core.{ InetSocketAddress, SocketAddress }
 import zio.test.Assertion._
 import zio.test._
 
@@ -29,7 +29,7 @@ object BaseEventHandlerSpec {
     testM("send nick and user commands on Connected Event") {
       for {
         handler <- ZIO.access[EventHandler](_.get)
-        addr    <- SocketAddress.inetSocketAddress(1234)
+        addr    <- InetSocketAddress.localHost(1234)
         _       <- handler.handle(Connected(addr))
         all     <- Api.dequeueAllOutMessages()
       } yield assert(all.count(c => c.cmd == Command.Nick || c.cmd == Command.User))(equalTo(2))
