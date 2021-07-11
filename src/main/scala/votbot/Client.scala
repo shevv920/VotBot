@@ -10,7 +10,7 @@ import zio.clock.Clock
 import zio.console.{ Console, putStrLn }
 import zio.duration._
 import zio.nio.channels.AsynchronousSocketChannel
-import zio.nio.core.{ InetSocketAddress, SocketAddress }
+import zio.nio.core.InetSocketAddress
 import zio.{ Chunk, Schedule, Task, ZIO }
 
 object Client {
@@ -22,11 +22,11 @@ object Client {
       _ <- AsynchronousSocketChannel()
             .use { channel =>
               for {
-                addr <- SocketAddress.inetSocketAddress(config.server.address, config.server.port)
+                addr <- InetSocketAddress.hostNameResolved(config.server.address, config.server.port)
                 _    <- connection(channel, addr)
               } yield ()
             }
-            .onError(e => putStrLn(e.untraced.prettyPrint))
+            .onError(e => putStrLn(e.untraced.prettyPrint).orDie)
             .retry(Schedule.spaced(5.seconds))
     } yield ()
 
@@ -51,10 +51,8 @@ object Client {
       str          <- ZIO.effect(rem + new String(chunk.toArray, StandardCharsets.UTF_8))
       res          <- split(str)
       (valid, rem) = res
-      _ <- ZIO.foreach_(valid.toList) { v =>
-            ZIO.accessM[Api](_.get.enqueueReceived(v))
-          }
-      _ <- reader(channel, rem.mkString(""))
+      _            <- ZIO.foreach_(valid.toList)(v => ZIO.accessM[Api](_.get.enqueueReceived(v)))
+      _            <- reader(channel, rem.mkString(""))
     } yield ()
 
   private def split(str: String): Task[(Array[String], Array[String])] =
