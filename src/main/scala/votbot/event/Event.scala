@@ -80,8 +80,8 @@ object Event {
             }
             .toList
           NamesList(ChannelKey(channel), members)
-        case rm @ Message(Command.Join, _, _) =>
-          parseJoin(currentNick, isExtendedJoin, rm)
+        case rm @ Message(Command.Join, args, Some(prefix)) =>
+          parseJoin(currentNick, isExtendedJoin, args, prefix, rm)
         case Message(Command.Part, channels, Some(prefix)) if prefix.nick.equalsIgnoreCase(currentNick) =>
           /*
                     Servers MUST be able to parse arguments in the form of a list of
@@ -133,16 +133,17 @@ object Event {
       }
     } yield event
 
-  private def parseJoin(botNick: String, isExtended: Boolean, message: Message): Event =
-    message match {
-      case Message(Command.Join, args, Some(prefix)) if prefix.nick.equalsIgnoreCase(botNick) =>
+  private def parseJoin(botNick: String, isExtended: Boolean, args: List[String], prefix: Prefix, message: Message): Event =
+    (args, prefix) match {
+      case (args, prefix) if prefix.nick.equalsIgnoreCase(botNick) =>
         BotJoin(args.head)
-      case Message(Command.Join, args, Some(prefix)) if !isExtended =>
+      case (args, prefix) if !isExtended =>
         Join(UserKey(prefix.nick), ChannelKey(args.head))
-      case Message(Command.Join, args, Some(prefix)) if args.size > 1 =>
+      case (args, prefix) if args.size > 1 =>
         val channel     = args.head
         val accountName = args.tail.head
         ExtendedJoin(UserKey(prefix.nick), ChannelKey(channel), accountName)
+      case _ => Unknown(message)
     }
 
 }

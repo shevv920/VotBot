@@ -2,10 +2,10 @@ enablePlugins(PackPlugin)
 
 name := "VotBot"
 version := "0.2"
-scalaVersion := "2.13.1"
+scalaVersion := "2.13.6"
 scalacOptions += "-Ymacro-annotations"
 
-lazy val zioVersion    = "1.0.9"
+lazy val zioVersion    = "1.0.10"
 lazy val zioNioVersion = "1.0.0-RC11"
 
 packResourceDir += (baseDirectory.value / "src" / "main" / "resources" -> "")
@@ -16,8 +16,8 @@ resolvers +=
 libraryDependencies ++= Seq(
   "dev.zio"                      %% "zio"        % zioVersion,
   "dev.zio"                      %% "zio-nio"    % zioNioVersion,
-  "com.github.pureconfig"        %% "pureconfig" % "0.12.3",
-  "com.beachape"                 %% "enumeratum" % "1.5.15",
+  "com.github.pureconfig"        %% "pureconfig" % "0.16.0",
+  "com.beachape"                 %% "enumeratum" % "1.7.0",
   "org.xerial"                   % "sqlite-jdbc" % "3.30.1",
   "com.typesafe.slick"           %% "slick"      % "3.3.2",
   "org.slf4j"                    % "slf4j-nop"   % "1.6.4",

@@ -13,3 +13,5 @@
 /.metals/
 /out/
 /.vscode/
+/.bsp/
+project/.bloop/
