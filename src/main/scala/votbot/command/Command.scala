@@ -3,8 +3,9 @@ package votbot.command
 import votbot.Api
 import votbot.Api.Api
 import votbot.model.irc.{ ChannelKey, UserKey }
-import zio.console.{ Console, putStrLn }
 import zio.{ UIO, ZIO }
+import zio.Console
+import zio.Console.printLine
 
 sealed trait Command
 
@@ -48,7 +49,7 @@ object Command {
 
   val fullMatcher: Matcher = matchers.fold(PartialFunction.empty[String, Command])(_.orElse(_))
 
-  def fromString(str: String): UIO[Command] = ZIO.effectTotal {
+  def fromString(str: String): UIO[Command] = ZIO.succeed {
     if (fullMatcher.isDefinedAt(str))
       fullMatcher(str)
     else
@@ -68,7 +69,7 @@ object Command {
             case SayPrivate(target, msg) =>
               api.sendPrivateMessage(target.value, msg)
             case WrongCommand(raw) =>
-              putStrLn(s"Unknown command $raw")
+              printLine(s"Unknown command $raw")
           }
     } yield ()
 

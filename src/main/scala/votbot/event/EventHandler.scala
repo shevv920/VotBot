@@ -4,14 +4,14 @@ import votbot.database.Database
 import votbot.event.Event._
 import votbot.model.irc._
 import votbot.{ Api, BotState, Configuration }
-import zio.random.Random
-import zio.{ Has, IO, ZIO, ZLayer }
+import zio.{ IO, ZIO, ZLayer }
+import zio.Random
 
 object EventHandler {
-  type EventHandler = Has[EventHandler.Service]
+  type EventHandler = EventHandler.Service
 
   trait Service {
-    def handle(event: Event): IO[Throwable, Unit]
+    def handle(event: Event): IO[Throwable, Option[Unit]]
     protected def onPing: PartialFunction[Event, IO[Throwable, Unit]]
     protected def onConnected: PartialFunction[Event, IO[Throwable, Unit]]
     protected def onWelcome: PartialFunction[Event, IO[Throwable, Unit]]
@@ -28,26 +28,15 @@ object EventHandler {
     def handleFunction: PartialFunction[Event, IO[Throwable, Unit]]
   }
 
-  def handle(event: Event): ZIO[EventHandler, Throwable, Unit] =
-    ZIO.accessM[EventHandler](_.get.handle(event))
+  def handle(event: Event): ZIO[EventHandler, Throwable, Option[Unit]] =
+    ZIO.environmentWithZIO[EventHandler](_.get.handle(event))
 
-  val defaultEventHandler =
-    ZLayer.fromServices[
-      Api.Service,
-      Configuration.Service,
-      Database.Service,
-      BotState.Service,
-      Random.Service,
-      EventHandler.Service
-    ] {
-      (
-        api: Api.Service,
-        cfg: Configuration.Service,
-        database: Database.Service,
-        botState: BotState.Service,
-        random: Random.Service
-      ) =>
-        new EventHandler.Service {
+    case class DefaultEventHandler(
+      api: Api.Service,
+      cfg: Configuration.Service,
+      database: Database.Service,
+      botState: BotState.Service,
+      random: Random) extends EventHandler.Service {
 
           val handlerFunctions = List(
             onWelcome,
@@ -67,7 +56,7 @@ object EventHandler {
           override val handleFunction: PartialFunction[Event, ZIO[Any, Throwable, Unit]] =
             handlerFunctions.foldLeft(PartialFunction.empty[Event, ZIO[Any, Throwable, Unit]])(_.orElse(_))
 
-          override def handle(event: Event): ZIO[Any, Throwable, Unit] =
+          override def handle(event: Event): ZIO[Any, Throwable, Option[Unit]] =
             ZIO.whenCase(event)(handleFunction)
 
           override def onPing: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
@@ -82,9 +71,12 @@ object EventHandler {
               val capLsCmd = Message(Command.CapLs)
               val nickCmd  = Message(Command.Nick, cfg.bot.nick)
               val userCmd  = Message(Command.User, cfg.bot.userName, "*", "*", cfg.bot.realName)
-              api.enqueueOutMessage(capLsCmd) *> api.enqueueOutMessage(nickCmd) *> api.enqueueOutMessage(
-                userCmd
-              )
+              for {
+                _ <- api.enqueueOutMessage(capLsCmd)
+                _ <- api.enqueueOutMessage(nickCmd)
+                _ <- api.enqueueOutMessage(userCmd)
+              } yield ()
+
           }
 
           override def onWelcome: PartialFunction[Event, ZIO[Any, Throwable, Unit]] = {
@@ -210,5 +202,5 @@ object EventHandler {
           }
         }
 
-    }
+  val defaultEventHandler = (DefaultEventHandler(_, _, _, _, _)).toLayer
 }

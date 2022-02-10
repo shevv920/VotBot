@@ -9,13 +9,12 @@ import votbot.database.Database.Database
 import votbot.event.EventHandler.EventHandler
 import votbot.event.{ Event, EventHandler }
 import zio._
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.console.{ Console, _ }
-import zio.random.Random
-import zio.system.System
 
-object Main extends App {
+import zio.Clock
+import zio.{ Console, Random, ZIOAppDefault }
+import zio.Console.printLine
+
+object Main extends ZIOAppDefault {
 
   type VotbotEnv = Any
     with Console
@@ -24,13 +23,12 @@ object Main extends App {
     with Configuration
     with BotState
     with Api
-    with Blocking
+    with Any
     with HttpClient
     with Database
 
   private val system   = System.live
   private val clock    = Clock.live
-  private val blocking = Blocking.live
   private val console  = Console.live
   private val random   = Random.live
 
@@ -41,7 +39,6 @@ object Main extends App {
   private val database   = Database.defaultDatabase
 
   private val votBotEnv = console ++
-    blocking ++
     clock ++
     random ++
     system ++
@@ -52,13 +49,13 @@ object Main extends App {
     database
   private val eventHandler = (api ++ config ++ database ++ botState ++ random) >>> EventHandler.defaultEventHandler
 
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
-    mainLogic(args)
+  override def run: URIO[zio.ZEnv, ExitCode] =
+    mainLogic
       .provideCustomLayer(votBotEnv ++ eventHandler)
       .either
       .map(_.fold(e => { println(e); ExitCode.failure }, _ => ExitCode.success))
 
-  def mainLogic(args: List[String]): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
+  def mainLogic: ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
       client         <- Client.make().fork
       parser         <- IrcMessageParser.parser().forever.fork
@@ -75,7 +72,7 @@ object Main extends App {
   def eventProcessor(): ZIO[VotbotEnv with EventHandler, Throwable, Unit] =
     for {
       evt <- Api.dequeueEvent()
-      _   <- putStrLn("Processing Event: " + evt.toString)
+      _   <- printLine("Processing Event: " + evt.toString)
       _   <- EventHandler.handle(evt)
     } yield ()
 

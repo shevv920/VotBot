@@ -2,9 +2,9 @@ package votbot
 
 import votbot.Api.Api
 import votbot.model.irc.Command.Unknown
-import votbot.model.irc.{ Command, Message, Prefix }
-import zio.console._
-import zio.{ Task, ZIO }
+import votbot.model.irc.{Command, Message, Prefix}
+import zio.Console.printLine
+import zio.{Console, Task, ZIO}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -18,7 +18,7 @@ object IrcMessageParser {
   val numericCommandRegex: Regex = """(\d{3})""".r
 
   def parse(raw: String): Task[Message] =
-    ZIO.effect {
+    ZIO.attempt {
       val (prefix, commandParams) =
         if (raw.startsWith(":"))
           raw.splitAt(raw.indexOf(' ') + 1)
@@ -57,7 +57,7 @@ object IrcMessageParser {
   def parser(): ZIO[Api with Console, Throwable, Unit] =
     for {
       raw        <- Api.dequeueReceived()
-      _          <- putStrLn("Got to parse: " + raw)
+      _          <- printLine("Got to parse: " + raw)
       ircMessage <- parse(raw)
       _          <- Api.enqueueParsed(ircMessage)
     } yield ()
