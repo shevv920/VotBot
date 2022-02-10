@@ -16,7 +16,7 @@ object Message {
       new Message(cmd, args.toList, None)
 
   def toByteArray(msg: Message): UIO[Array[Byte]] =
-    ZIO.effectTotal {
+    ZIO.succeed {
       val str =
         msg.cmd.entryName.toUpperCase() +
           separator +

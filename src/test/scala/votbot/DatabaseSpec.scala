@@ -11,24 +11,24 @@ object DatabaseSpec {
 
   val tests = suite("Database")(
     suite("Quotes")(
-      testM("create schema if not exists") {
+      test("create schema if not exists") {
         for {
-          db <- ZIO.access[Database](_.get.quotesRepo)
+          db <- ZIO.serviceWith[Database](_.quotesRepo)
           s  <- db.createSchemaIfNotExists
         } yield assert(s)(isUnit)
       },
-      testM("add and get quotes") {
+      test("add and get quotes") {
         for {
-          db <- ZIO.access[Database](_.get.quotesRepo)
+          db <- ZIO.serviceWith[Database](_.quotesRepo)
           _  <- db.cleanQuotes()
           q  = Quote(0, "LENIN", "some.url.su", "bla bla bla", Some("lenin"))
           q2 = Quote(1, "LENIN", "some.url.su", "bla bla bla2", Some("lenin"))
           n  <- db.addQuotes(List(q, q2))
         } yield assert(n)(isSome(equalTo(2)))
       },
-      testM("get random quote by key") {
+      test("get random quote by key") {
         for {
-          db <- ZIO.access[Database](_.get.quotesRepo)
+          db <- ZIO.serviceWith[Database](_.quotesRepo)
           _  <- db.cleanQuotes()
           q  = Quote(2, "STALIN", "some.url.su", "bla basla bla", Some("STALIN"))
           q2 = Quote(3, "STALIN", "some.url.su", "bla bladas bla2", Some("STALIN"))
@@ -38,16 +38,16 @@ object DatabaseSpec {
       }
     ),
     suite("ChannelSettings")(
-      testM("create schema if not exists") {
+      test("create schema if not exists") {
         for {
-          db         <- ZIO.access[Database](_.get.channelSettingsRepo)
+          db         <- ZIO.serviceWith[Database](_.channelSettingsRepo)
           _          <- db.createSchemaIfNotExists
           mbSettings <- db.findByKey(ChannelKey("12345"))
         } yield assert(mbSettings)(isNone)
       },
-      testM("find settings") {
+      test("find settings") {
         for {
-          db         <- ZIO.access[Database](_.get.channelSettingsRepo)
+          db         <- ZIO.serviceWith[Database](_.channelSettingsRepo)
           mbSettings <- db.findByKey(ChannelKey("1235"))
         } yield assert(mbSettings)(isNone)
       }

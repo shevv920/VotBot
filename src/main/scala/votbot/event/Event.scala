@@ -4,7 +4,7 @@ import votbot.BotState.BotState
 import votbot.Main.VotbotEnv
 import votbot.model.irc._
 import zio.ZIO
-import zio.nio.core.SocketAddress
+import zio.nio.SocketAddress
 
 sealed trait Event extends Serializable with Product
 
@@ -43,7 +43,7 @@ object Event {
 
   def fromIrcMessage(ircMsg: Message): ZIO[BotState, Throwable, Event] =
     for {
-      state          <- ZIO.access[BotState](_.get)
+      state          <- ZIO.service[BotState]
       currentNick    <- state.currentNick()
       isExtendedJoin <- state.isCapabilityEnabled(Capabilities.ExtendedJoin)
       event = ircMsg match {

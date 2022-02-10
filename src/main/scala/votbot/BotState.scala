@@ -3,10 +3,10 @@ package votbot
 import votbot.Configuration.Configuration
 import votbot.model.Bot.State
 import votbot.model.irc.Capability
-import zio.{ Has, IO, Ref, Task, ZIO, ZLayer }
+import zio.{ IO, Ref, Task, ZLayer }
 
 object BotState {
-  type BotState = Has[BotState.Service]
+  type BotState = BotState.Service
 
   trait Service {
     protected val state: Ref[State]

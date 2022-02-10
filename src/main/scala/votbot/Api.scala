@@ -5,7 +5,7 @@ import votbot.model.irc.{ Channel, ChannelKey, Command, Message, User, UserKey }
 import zio._
 
 object Api {
-  type Api = Has[Api.Service]
+  type Api = Api.Service
 
   trait Service {
 
@@ -17,7 +17,7 @@ object Api {
     def dequeueEvent(): IO[Nothing, Event]
     def dequeueReceived(): IO[Nothing, String]
     def dequeueOutMessage(): IO[Nothing, Message]
-    def dequeueAllOutMessages(): IO[Nothing, List[Message]]
+    def dequeueAllOutMessages(): IO[Nothing, Chunk[Message]]
     def dequeueParsedMessage(): IO[Nothing, Message]
 
     def sendChannelMessage(channel: ChannelKey, msg: String): IO[Nothing, Unit]
@@ -49,31 +49,31 @@ object Api {
   }
 
   def enqueueEvent(evt: Event): ZIO[Api, Nothing, Unit] =
-    ZIO.accessM[Api](_.get.enqueueEvent(evt))
+    ZIO.environmentWithZIO[Api](_.get.enqueueEvent(evt))
 
   def enqueueParsed(msg: Message): ZIO[Api, Nothing, Unit] =
-    ZIO.accessM[Api](_.get.enqueueParsed(msg))
+    ZIO.environmentWithZIO[Api](_.get.enqueueParsed(msg))
 
   def enqueueReceived(raw: String): ZIO[Api, Nothing, Unit] =
-    ZIO.accessM[Api](_.get.enqueueReceived(raw))
+    ZIO.environmentWithZIO[Api](_.get.enqueueReceived(raw))
 
   def enqueueOutMessage(msg: Message): ZIO[Api, Nothing, Unit] =
-    ZIO.accessM[Api](_.get.enqueueOutMessage(msg))
+    ZIO.environmentWithZIO[Api](_.get.enqueueOutMessage(msg))
 
   def dequeueEvent(): ZIO[Api, Nothing, Event] =
-    ZIO.accessM[Api](_.get.dequeueEvent())
+    ZIO.environmentWithZIO[Api](_.get.dequeueEvent())
 
   def dequeueReceived(): ZIO[Api, Nothing, String] =
-    ZIO.accessM[Api](_.get.dequeueReceived())
+    ZIO.environmentWithZIO[Api](_.get.dequeueReceived())
 
   def dequeueOutMessage(): ZIO[Api, Nothing, Message] =
-    ZIO.accessM[Api](_.get.dequeueOutMessage())
+    ZIO.environmentWithZIO[Api](_.get.dequeueOutMessage())
 
-  def dequeueAllOutMessages(): ZIO[Api, Nothing, List[Message]] =
-    ZIO.accessM[Api](_.get.dequeueAllOutMessages())
+  def dequeueAllOutMessages(): ZIO[Api, Nothing, Chunk[Message]] =
+    ZIO.environmentWithZIO[Api](_.get.dequeueAllOutMessages())
 
   def dequeueParsedMessage(): ZIO[Api, Nothing, Message] =
-    ZIO.accessM[Api](_.get.dequeueParsedMessage())
+    ZIO.environmentWithZIO[Api](_.get.dequeueParsedMessage())
 
   val defaultApi: Layer[Nothing, Api] = (for {
     rcvdQ      <- Queue.unbounded[String]
@@ -130,7 +130,7 @@ trait DefaultApi extends Api.Service {
   override def leaveChannel(channelKey: ChannelKey, reason: String = ""): IO[Throwable, Unit] =
     for {
       channel <- findChannel(channelKey)
-      _ <- ZIO.whenM(ZIO.effectTotal(channel.nonEmpty)) {
+      _ <- ZIO.whenZIO(ZIO.succeed(channel.nonEmpty)) {
             enqueueOutMessage(Message(Command.Part, channel.get.name))
           }
     } yield ()
@@ -144,7 +144,7 @@ trait DefaultApi extends Api.Service {
       newUser = oldUser.copy(name = newNick, accountName = None)
       _       <- addUser(newUser)
       _       <- removeUser(oldUser)
-      _       <- ZIO.foreach_(newUser.channels)(ch => addUserToChannel(ch, newUser))
+      _       <- ZIO.foreachDiscard(newUser.channels)(ch => addUserToChannel(ch, newUser))
     } yield ()
 
   override def queryAccByNick(name: String): IO[Throwable, Unit] =
@@ -188,7 +188,7 @@ trait DefaultApi extends Api.Service {
   override def getOrCreateUser(name: String): IO[Throwable, User] =
     for {
       users <- knownUsers.get
-      user  <- ZIO.effect(users.getOrElse(UserKey(name), User(name, Set.empty)))
+      user  <- ZIO.attempt(users.getOrElse(UserKey(name), User(name, Set.empty)))
       _     <- addUser(user)
     } yield user
 
@@ -197,7 +197,7 @@ trait DefaultApi extends Api.Service {
 
   override def removeUser(user: User): IO[Throwable, Unit] =
     for {
-      _ <- ZIO.foreach_(user.channels) { chName =>
+      _ <- ZIO.foreachDiscard(user.channels) { chName =>
             removeChannelMember(chName, UserKey(user.name))
           }
       _ <- knownUsers.update(u => u - UserKey(user.name))
@@ -269,7 +269,7 @@ trait DefaultApi extends Api.Service {
   override def dequeueOutMessage(): UIO[Message] =
     outMessageQ.take
 
-  override def dequeueAllOutMessages(): UIO[List[Message]] =
+  override def dequeueAllOutMessages(): UIO[Chunk[Message]] =
     outMessageQ.takeAll
 
   override def sendChannelMessage(channel: ChannelKey, msg: String): UIO[Unit] =

@@ -1,26 +1,26 @@
 package votbot.event
 
 import votbot.BotState.BotState
-import votbot.event.Event.{ CapabilityAck, ExtendedJoin, UserLoggedIn, UserLoggedOut }
+import votbot.event.Event.{CapabilityAck, ExtendedJoin, UserLoggedIn, UserLoggedOut}
 import votbot.model.irc._
 import zio.ZIO
 import zio.test.Assertion.equalTo
-import zio.test.{ assert, suite, testM }
+import zio.test.{assert, suite, test}
 
 object EventSpec {
 
   val tests = suite("Event ")(
-    testM("Recognize CAP * ACK msg") {
+    test("Recognize CAP * ACK msg") {
       for {
         event <- Event.fromIrcMessage(Message(Command.Cap, List("*", "ACK", "cap1 cap2 cap3")))
       } yield assert(event)(equalTo(CapabilityAck(List("cap1 cap2 cap3".split("\\s"): _*))))
     },
-    testM("Recognize CAP * ACK : msg (empty caps list)") {
+    test("Recognize CAP * ACK : msg (empty caps list)") {
       for {
         event <- Event.fromIrcMessage(Message(Command.Cap, List("*", "ACK", "")))
       } yield assert(event)(equalTo(CapabilityAck(List(""))))
     },
-    testM("Recognize ACCOUNT accountName (logged in msg)") {
+    test("Recognize ACCOUNT accountName (logged in msg)") {
       val prefix = Prefix("nick", "user", "host")
       for {
         event <- Event.fromIrcMessage(
@@ -28,7 +28,7 @@ object EventSpec {
                 )
       } yield assert(event)(equalTo(UserLoggedIn(UserKey(prefix.nick), "accountName")))
     },
-    testM("Recognize ACCOUNT * msg (logged out)") {
+    test("Recognize ACCOUNT * msg (logged out)") {
       val prefix = Prefix("nick", "user", "host")
       for {
         event <- Event.fromIrcMessage(
@@ -36,11 +36,11 @@ object EventSpec {
                 )
       } yield assert(event)(equalTo(UserLoggedOut(UserKey(prefix.nick))))
     },
-    testM("Recognize Join msg when its extended join capability") {
+    test("Recognize Join msg when its extended join capability") {
       val prefix = Prefix("nick", "user", "host")
       val msg    = Message(Command.Join, List("#votbot", "*", ""), Some(prefix))
       for {
-        _     <- ZIO.accessM[BotState](_.get.addCapabilities(Capabilities.ExtendedJoin))
+        _     <- ZIO.environmentWithZIO[BotState](_.get.addCapabilities(Capabilities.ExtendedJoin))
         event <- Event.fromIrcMessage(msg)
       } yield assert(event)(equalTo(ExtendedJoin(UserKey("nick"), ChannelKey("#votbot"), "*")))
     }

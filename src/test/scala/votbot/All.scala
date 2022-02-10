@@ -1,19 +1,19 @@
 package votbot
 
 import votbot.database.Database
-import votbot.event.{ BaseEventHandlerSpec, EventHandler }
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.console.Console
-import zio.random.Random
-import zio.system.System
+import votbot.event.{ EventHandler }
+
+import zio.Clock
+import zio.System
+import zio.Console
+import zio.Random
 import zio.test._
+import zio.test.ZIOSpecDefault
 
 object All {
 
   private val system   = System.live
   private val clock    = Clock.live
-  private val blocking = Blocking.live
   private val console  = Console.live
   private val random   = Random.live
 
@@ -24,7 +24,6 @@ object All {
   private val database   = Database.defaultDatabase
 
   val votBotEnv = console ++
-    blocking ++
     clock ++
     random ++
     system ++
@@ -37,6 +36,6 @@ object All {
 
 }
 
-object AllSuites extends DefaultRunnableSpec {
+object AllSuites extends ZIOSpecDefault {
   def spec = suite("All tests")(ApiSpec.tests, MsgParserSpec.tests).provideLayer(All.api)
 }

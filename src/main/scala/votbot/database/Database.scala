@@ -1,11 +1,10 @@
 package votbot.database
 
 import slick.basic.BasicBackend
-import zio.ZLayer.NoDeps
-import zio.{ Has, Task, ZLayer }
+import zio.{Task, ULayer, ZLayer}
 
 object Database {
-  type Database = Has[Database.Service]
+  type Database = Database.Service
 
   trait Service {
     def databaseProvider: DatabaseProvider.Service
@@ -14,7 +13,7 @@ object Database {
     def quotesRepo: QuotesRepo
   }
 
-  val defaultDatabase: NoDeps[Nothing, Database] = ZLayer.succeed(new DefaultDatabase)
+  val defaultDatabase: ULayer[Database] = ZLayer.succeed(new DefaultDatabase)
 }
 
 class DefaultDatabase extends Database.Service {

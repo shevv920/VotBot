@@ -3,8 +3,9 @@ package votbot
 import java.nio.file.Paths
 
 import pureconfig.ConfigSource
-import zio.{ Has, ULayer, URIO, ZIO, ZLayer, system }
+import zio.{ ULayer, URIO, ZIO, ZLayer }
 import pureconfig.generic.auto._
+import zio.System
 
 case class Config(debug: Boolean, server: Server, bot: BotProps, admin: Admin, http: Http)
 case class Server(address: String, port: Int, capRequire: Option[List[String]])
@@ -20,7 +21,7 @@ case class BotProps(
 )
 
 object Configuration {
-  type Configuration = Has[Configuration.Service]
+  type Configuration = Configuration.Service
 
   trait Service {
     def config: Config
@@ -30,19 +31,19 @@ object Configuration {
     def bot: BotProps
   }
 
-  def bot: URIO[Configuration, BotProps]  = ZIO.access[Configuration](_.get.bot)
-  def config: URIO[Configuration, Config] = ZIO.access[Configuration](_.get.config)
-  def http: URIO[Configuration, Http]     = ZIO.access[Configuration](_.get.http)
-  def server: URIO[Configuration, Server] = ZIO.access[Configuration](_.get.server)
-  def admin: URIO[Configuration, Admin]   = ZIO.access[Configuration](_.get.admin)
+  def bot: URIO[Configuration, BotProps]  = ZIO.serviceWith[Configuration](_.bot)
+  def config: URIO[Configuration, Config] = ZIO.serviceWith[Configuration](_.config)
+  def http: URIO[Configuration, Http]     = ZIO.serviceWith[Configuration](_.http)
+  def server: URIO[Configuration, Server] = ZIO.serviceWith[Configuration](_.server)
+  def admin: URIO[Configuration, Admin]   = ZIO.serviceWith[Configuration](_.admin)
 
   private def mkCfgPath() =
-    system
+    System
       .property("user.dir")
       .map(_.getOrElse(".") + "/" + "application.conf")
       .map(Paths.get(_))
 
-  val defaultConfig: ZLayer[system.System, Serializable, Configuration] =
+  val defaultConfig: ZLayer[System, Serializable, Configuration] =
     (for {
       path <- mkCfgPath()
       cfg <- ZIO
@@ -56,7 +57,7 @@ object Configuration {
       override val bot: BotProps  = cfg.bot
     }).toLayer
 
-  val testConfiguration: ULayer[Has[TestConfiguration]] = ZLayer.succeed(new TestConfiguration)
+  val testConfiguration: ULayer[TestConfiguration] = ZLayer.succeed(new TestConfiguration)
 }
 
 class TestConfiguration extends Configuration.Service {

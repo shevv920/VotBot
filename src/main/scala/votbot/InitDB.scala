@@ -2,13 +2,13 @@ package votbot
 
 import votbot.Configuration.Configuration
 import votbot.database.Database.Database
-import votbot.database.{ Database, DefaultDatabase }
+import votbot.database.Database
 import votbot.model.DB.ChannelPrefs
 import votbot.model.irc.ChannelKey
-import zio.{ App, ExitCode, ZIO }
-import zio.system._
+import zio.{ ExitCode, ZIO }
+import zio.{ System, ZIOAppDefault }
 
-object InitDB extends App {
+object InitDB extends ZIOAppDefault {
 
   private val env = System.live ++ Database.defaultDatabase ++ Configuration.defaultConfig
 
@@ -24,7 +24,7 @@ object InitDB extends App {
       _                     <- db.channelSettingsRepo.insertAll(autoJoinChannelsPrefs)
     } yield ()
 
-  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, ExitCode] =
+  override def run: ZIO[zio.ZEnv, Nothing, ExitCode] =
     main
       .provideSomeLayer(env)
       .either

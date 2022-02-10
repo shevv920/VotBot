@@ -14,41 +14,41 @@ object ApiSpec {
   private val testEmptyChannel = Channel(testChannelName, List.empty, Set.empty, Set.empty, PartialFunction.empty)
 
   val tests = suite("Api spec")(
-    testM("addChannel creates channel") {
+    test("addChannel creates channel") {
       for {
-        api     <- ZIO.access[Api](_.get)
+        api     <- ZIO.service[Api]
         _       <- api.addChannel(testEmptyChannel)
         channel <- api.getChannel(ChannelKey(testEmptyChannel.name))
       } yield assert(channel)(equalTo(testEmptyChannel))
     },
-    testM("addUser creates user") {
+    test("addUser creates user") {
       for {
-        api     <- ZIO.access[Api](_.get)
+        api     <- ZIO.service[Api]
         srcUser = testEmptyUser
         _       <- api.addUser(srcUser)
         user    <- api.getUser(UserKey(testEmptyUser.name))
       } yield assert(user)(equalTo(srcUser))
     },
-    testM("addChannelToUser add new channel to user's channel set") {
+    test("addChannelToUser add new channel to user's channel set") {
       for {
-        api   <- ZIO.access[Api](_.get)
+        api   <- ZIO.service[Api]
         user  <- api.getOrCreateUser(testUserName1)
         _     <- api.addChannel(testEmptyChannel)
         _     <- api.addChannelToUser(ChannelKey(testEmptyChannel.name), UserKey(user.name))
         nUser <- api.getUser(UserKey(user.name))
       } yield assert(nUser.channels)(equalTo(Set[ChannelKey](ChannelKey(testEmptyChannel.name))))
     },
-    testM("removeChannel removes channel") {
+    test("removeChannel removes channel") {
       for {
-        api <- ZIO.access[Api](_.get)
+        api <- ZIO.service[Api]
         _   <- api.addChannel(testEmptyChannel)
         _   <- api.removeChannel(ChannelKey(testEmptyChannel.name))
         res <- api.allChannels()
       } yield assert(res)(isEmpty)
     },
-    testM("removeUser removes user from knownUsers and all channels") {
+    test("removeUser removes user from knownUsers and all channels") {
       for {
-        api      <- ZIO.access[Api](_.get)
+        api      <- ZIO.service[Api]
         _        <- api.addChannel(testEmptyChannel)
         srcUser  = User(testUserName1, Set(ChannelKey(testEmptyChannel.name)))
         _        <- api.addUser(srcUser)
@@ -57,26 +57,26 @@ object ApiSpec {
         channels <- api.allChannels()
       } yield assert(mbUser)(isNone) && assert(channels.filter(_.members.contains(UserKey(testUserName1))))(isEmpty)
     },
-    testM("change nick removes old user and adds new one") {
+    test("change nick removes old user and adds new one") {
       for {
-        api  <- ZIO.access[Api](_.get)
+        api  <- ZIO.service[Api]
         _    <- api.addUser(testEmptyUser)
         _    <- api.changeUserNick(testUserName1, testUserName2)
         oldU <- api.findUser(testUserName1)
         newU <- api.findUser(testUserName2)
       } yield assert(oldU)(isNone) && assert(newU)(isSome(equalTo(testEmptyUser.copy(name = testUserName2))))
     },
-    testM("change nick removes accountName from new user") {
+    test("change nick removes accountName from new user") {
       for {
-        api  <- ZIO.access[Api](_.get)
+        api  <- ZIO.service[Api]
         _    <- api.addUser(testEmptyUser)
         _    <- api.changeUserNick(testUserName1, testUserName2)
         newU <- api.getUser(UserKey(testUserName2))
       } yield assert(newU.accountName)(isNone)
     },
-    testM("change nick affects user channels") {
+    test("change nick affects user channels") {
       for {
-        api   <- ZIO.access[Api](_.get)
+        api   <- ZIO.service[Api]
         _     <- api.addUser(testEmptyUser)
         _     <- api.addChannel(testEmptyChannel)
         _     <- api.addChannelToUser(ChannelKey(testEmptyChannel.name), UserKey(testEmptyUser.name))
