@@ -24,7 +24,7 @@ object InitDB extends ZIOAppDefault {
       _                     <- db.channelSettingsRepo.insertAll(autoJoinChannelsPrefs)
     } yield ()
 
-  override def run: ZIO[zio.ZEnv, Nothing, ExitCode] =
+  override def run =
     main
       .provideSomeLayer(env)
       .either

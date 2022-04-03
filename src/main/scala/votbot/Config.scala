@@ -43,7 +43,7 @@ object Configuration {
       .map(_.getOrElse(".") + "/" + "application.conf")
       .map(Paths.get(_))
 
-  val defaultConfig: ZLayer[System, Serializable, Configuration] =
+  val defaultConfig: ZLayer[Any, Serializable, Configuration] =
     (for {
       path <- mkCfgPath()
       cfg <- ZIO

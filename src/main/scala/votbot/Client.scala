@@ -20,18 +20,23 @@ object Client {
   def make(): ZIO[Api with Console with Configuration with Clock, Exception, Unit] =
     for {
       config <- Configuration.config
-      _ <- AsynchronousSocketChannel.open
-            .use { channel =>
-              for {
-                addr <- InetSocketAddress.hostNameResolved(config.server.address, config.server.port)
-                _    <- connection(channel, addr)
-              } yield ()
-            }
-            .onError(e => printLine(e.untraced.prettyPrint).orDie)
-            .retry(Schedule.spaced(5.seconds))
+      _ <- ZIO.scoped {
+            AsynchronousSocketChannel.open
+              .flatMap { channel =>
+                for {
+                  addr <- InetSocketAddress.hostNameResolved(config.server.address, config.server.port)
+                  _    <- connection(channel, addr)
+                } yield ()
+              }
+              .onError(e => printLine(e.untraced.prettyPrint).orDie)
+              .retry(Schedule.spaced(5.seconds))
+          }
     } yield ()
 
-  def connection(channel: AsynchronousSocketChannel, addr: InetSocketAddress): ZIO[Api with Console with Clock, Exception, Unit] =
+  def connection(
+    channel: AsynchronousSocketChannel,
+    addr: InetSocketAddress
+  ): ZIO[Api with Console with Clock, Exception, Unit] =
     for {
       _        <- printLine("connecting to: " + addr.toString())
       _        <- channel.connect(addr)
@@ -60,12 +65,12 @@ object Client {
     ZIO.attempt(str.split("(?<=\r\n)").filter(_.nonEmpty).span(_.endsWith("\r\n")))
 
   def writer(
-    channel: => AsynchronousSocketChannel,
+    channel: => AsynchronousSocketChannel
   ): ZIO[Api with Clock, Throwable, Unit] =
     (for {
       msg      <- ZIO.serviceWithZIO[Api](_.dequeueOutMessage())
       msgBytes <- Message.toByteArray(msg)
       chunk    = Chunk.fromArray(msgBytes)
-      _     <- channel.writeChunk(chunk)
+      _        <- channel.writeChunk(chunk)
     } yield ()).forever
 }

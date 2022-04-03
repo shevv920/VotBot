@@ -29,5 +29,9 @@ object HttpClient {
       )
   }
 
-  val defaultHttpClient: URLayer[Configuration, HttpClient] = (DefaultHttpClient(_)).toLayer[HttpClient]
+  val defaultHttpClient: URLayer[Configuration, HttpClient] = ZLayer {
+    for {
+      cfg <- ZIO.service[Configuration]
+    } yield DefaultHttpClient(cfg)
+  }
 }

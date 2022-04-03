@@ -1,7 +1,7 @@
 package votbot
 
 import votbot.database.Database
-import votbot.event.{ EventHandler }
+import votbot.event.EventHandler
 
 import zio.Clock
 import zio.System
@@ -12,12 +12,11 @@ import zio.test.ZIOSpecDefault
 
 object All {
 
-  private val system   = System.live
-  private val clock    = Clock.live
-  private val console  = Console.live
-  private val random   = Random.live
+  private val clock   = Clock.live
+  private val console = Console.live
+  private val random  = Random.live
 
-  private val config     = system >>> Configuration.defaultConfig
+  private val config     = Configuration.defaultConfig
   private val botState   = config >>> BotState.defaultBotState
   private val httpClient = config >>> HttpClient.defaultHttpClient
   val api                = Api.defaultApi
@@ -26,7 +25,6 @@ object All {
   val votBotEnv = console ++
     clock ++
     random ++
-    system ++
     config ++
     botState ++
     api ++

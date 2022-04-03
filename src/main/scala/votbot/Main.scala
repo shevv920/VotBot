@@ -27,12 +27,11 @@ object Main extends ZIOAppDefault {
     with HttpClient
     with Database
 
-  private val system   = System.live
-  private val clock    = Clock.live
-  private val console  = Console.live
-  private val random   = Random.live
+  private val clock   = Clock.live
+  private val console = Console.live
+  private val random  = Random.live
 
-  private val config     = system >>> Configuration.defaultConfig
+  private val config     = Configuration.defaultConfig
   private val botState   = config >>> BotState.defaultBotState
   private val httpClient = config >>> HttpClient.defaultHttpClient
   private val api        = Api.defaultApi
@@ -41,7 +40,6 @@ object Main extends ZIOAppDefault {
   private val votBotEnv = console ++
     clock ++
     random ++
-    system ++
     config ++
     botState ++
     api ++
@@ -49,9 +47,9 @@ object Main extends ZIOAppDefault {
     database
   private val eventHandler = (api ++ config ++ database ++ botState ++ random) >>> EventHandler.defaultEventHandler
 
-  override def run: URIO[zio.ZEnv, ExitCode] =
+  override def run =
     mainLogic
-      .provideCustomLayer(votBotEnv ++ eventHandler)
+      .provideLayer(votBotEnv ++ eventHandler)
       .either
       .map(_.fold(e => { println(e); ExitCode.failure }, _ => ExitCode.success))
 
